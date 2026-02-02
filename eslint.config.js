@@ -1,15 +1,15 @@
 /* eslint-disable unicorn/filename-case */
-import eslint from '@eslint/js';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
-import eslintPluginUnicorn from 'eslint-plugin-unicorn';
-import eslintPluginPreferArrow from 'eslint-plugin-prefer-arrow-functions';
+import eslint from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import eslintPluginUnicorn from "eslint-plugin-unicorn";
+import eslintPluginPreferArrow from "eslint-plugin-prefer-arrow-functions";
 
 const config = tseslint.config(
     eslint.configs.recommended,
     ...tseslint.configs.strictTypeChecked,
     ...tseslint.configs.stylisticTypeChecked,
-    eslintPluginUnicorn.configs['flat/recommended'],
+    eslintPluginUnicorn.configs["flat/recommended"],
     {
         languageOptions: {
             globals: globals.builtin,
@@ -19,24 +19,24 @@ const config = tseslint.config(
                 projectService: true,
                 tsconfigRootDir: import.meta.dirname,
             },
-        }
+        },
     },
     {
-        plugins: { "prefer-arrow-functions": eslintPluginPreferArrow }
+        plugins: { "prefer-arrow-functions": eslintPluginPreferArrow },
     },
     {
         ignores: [
+            ".yarn/",
             "eslint.config.js",
-            "config/",
             "dist/",
-            "types/"
-        ]
+            "plugin.json"
+        ],
     },
     {
         // ESLINT rules
         rules: {
             "no-underscore-dangle": "error",
-            "prefer-arrow-functions/prefer-arrow-functions": "error"
+            "prefer-arrow-functions/prefer-arrow-functions": "error",
         },
     },
     {
@@ -61,31 +61,37 @@ const config = tseslint.config(
             "@typescript-eslint/no-duplicate-type-constituents": ["error", { ignoreUnions: true }],
             "@typescript-eslint/no-inferrable-types": ["error", { ignoreParameters: true, ignoreProperties: true }],
             "@typescript-eslint/no-unsafe-argument": "error",
-            "@typescript-eslint/no-unused-vars": ["error", { "vars": "all", "args": "after-used", "ignoreRestSiblings": false, "argsIgnorePattern": "^_" }],
+            "@typescript-eslint/no-unused-vars": [
+                "error",
+                { vars: "all", args: "after-used", ignoreRestSiblings: false, argsIgnorePattern: "^_" },
+            ],
             "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
-            "@typescript-eslint/no-confusing-void-expression": ["error", { ignoreArrowShorthand: true }],
-            "@typescript-eslint/no-misused-promises": ["error", { "checksVoidReturn": false }],
+            "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: false }],
         },
     },
     {
         // UNICORN rules
         rules: {
             "unicorn/prefer-string-replace-all": "off", // TODO: enable it
-            "unicorn/filename-case": ["error",
+            "unicorn/filename-case": [
+                "error",
                 {
-                    "case": "pascalCase",
-                    "ignore": [".*\\.d\\.ts$", "^index(\\.d)?\\.ts$", "^API.*", "\\.schema(\\.ts)?", "\\.spec\\.ts$"]
-                }],
-            "unicorn/prevent-abbreviations": ["error",
+                    case: "pascalCase",
+                    ignore: [".*\\.d\\.ts$", "^index(\\.d)?\\.ts$", "^API.*", "\\.schema(\\.ts)?", "\\.spec\\.ts$"],
+                },
+            ],
+            "unicorn/prevent-abbreviations": [
+                "error",
                 {
-                    "replacements": {
-                        "str": { "string": false },
-                        "num": { "number": false },
-                        "i": { "index": false },
-                        "j": { "index": false },
-                        "args": false,
-                    }
-                }],
+                    replacements: {
+                        str: { string: false },
+                        num: { number: false },
+                        i: { index: false },
+                        j: { index: false },
+                        args: false,
+                    },
+                },
+            ],
             "unicorn/no-array-callback-reference": "off",
             "unicorn/no-array-for-each": "off",
             "unicorn/no-array-reduce": "off",
@@ -99,8 +105,18 @@ const config = tseslint.config(
             "unicorn/prefer-string-raw": "off",
             "unicorn/switch-case-braces": "off",
         },
+    },
+    {
+        files: ["**/*.js", "**/*.cjs"],
+        languageOptions: {
+            sourceType: "commonjs",
+            globals: globals.node,
+        },
+        rules: {
+            "unicorn/filename-case": "off",
+            "@typescript-eslint/no-require-imports": "off",
+        }
     }
 );
 
 export default config;
-
