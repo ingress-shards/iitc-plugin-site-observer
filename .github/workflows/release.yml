@@ -5,6 +5,7 @@ on:
         branches:
             - main
             - "feat/*"
+    workflow_dispatch:
 
 permissions:
     contents: write
@@ -33,6 +34,9 @@ jobs:
 
             - run: corepack enable
             - run: yarn install --immutable && yarn info
+
+            - name: Validate project
+              run: yarn validate
 
             - name: Tag release
               run: yarn semantic-release

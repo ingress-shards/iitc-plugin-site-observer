@@ -1,32 +1,29 @@
 import * as Plugin from "iitcpluginkit";
 import { ShardsObserverUI } from "./ShardsObserverUi";
-import { Coordinates, haversineDistance } from "@ingress-shards/shards-core";
+import { ConfigManager } from "./ConfigManager";
+
+// This should be configured via your webpack config (e.g., DefinePlugin)
+// It will default to a local server for development.
+const BASE_URL: string = process.env.CONFIG_BASE_URL;
 
 class Shards_Observer implements Plugin.Class {
     private ui: ShardsObserverUI;
+    private configManager: ConfigManager;
 
     constructor() {
-        this.ui = new ShardsObserverUI();
+        this.configManager = new ConfigManager(BASE_URL);
+        this.ui = new ShardsObserverUI(this.configManager);
     }
 
     init() {
+        this.configManager.syncConfig().catch((error) => {
+            console.error("Shards Observer: Failed to sync configuration", error);
+        });
+
         IITC.toolbox.addButton({
             label: "Shards Observer",
             action: () => this.ui.show(),
         });
-
-        const coords1: Coordinates = {
-            latitude: 38.707008,
-            longitude: -9.13564,
-        };
-
-        const coords2: Coordinates = {
-            latitude: 35.223789,
-            longitude: -80.841141,
-        };
-
-        const distance = haversineDistance(coords1, coords2);
-        console.log(`Calculated distance: ${distance / 1000} km`);
     }
 }
 

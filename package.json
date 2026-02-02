@@ -16,14 +16,18 @@
     "private": true,
     "scripts": {
         "build": "yarn build:dev",
-        "build:dev": "yarn ipk build:dev",
-        "build:prod": "yarn ipk build:prod",
+        "build:dev": "webpack --config webpack.dev.js",
+        "build:prod": "webpack --config webpack.prod.js",
         "start": "yarn ipk fileserver",
-        "autobuild": "yarn ipk autobuild"
+        "autobuild": "webpack --watch --config webpack.dev.js",
+        "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+        "lint": "eslint src",
+        "validate": "yarn clean && yarn lint && yarn build:prod"
     },
     "dependencies": {
-        "@ingress-shards/shards-core": "^0.1.0",
-        "iitcpluginkit": "^1.9.6"
+        "@ingress-shards/shards-core": "^0.2.0",
+        "iitcpluginkit": "^1.9.6",
+        "temporal-polyfill": "^0.3.0"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",
@@ -35,6 +39,7 @@
         "eslint-plugin-prefer-arrow-functions": "^3.9.1",
         "eslint-plugin-unicorn": "^62.0.0",
         "semantic-release": "^25.0.2",
+        "source-map-loader": "^5.0.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.52.0",

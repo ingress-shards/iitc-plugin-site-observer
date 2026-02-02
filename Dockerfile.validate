@@ -1,0 +1,15 @@
+FROM node:24.13.0-alpine
+
+RUN corepack enable
+
+WORKDIR /app
+
+# Step 1: Install dependencies (cached unless package/lock change)
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
+RUN yarn install --immutable
+
+# Step 2: Copy the rest of the source code
+COPY . .
+
+CMD ["yarn", "validate"]
