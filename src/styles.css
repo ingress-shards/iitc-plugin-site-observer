@@ -8,18 +8,20 @@
     height: 100%;
 }
 
-#dialog-shards-observer section main {
+#dialog-shards-observer main {
     flex-grow: 1;
     overflow-y: auto;
 }
 
-#dialog-shards-observer section footer {
+#dialog-shards-observer footer {
     flex-shrink: 0;
 
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    text-align: right;
     border-top: solid 1px #bbb;
+    margin-top: 5px;
 
     font-size: 0.6rem;
     font-family: monospace;
