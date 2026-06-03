@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.github_token
+.tmp_token
+package.tgz
+shards-core.tgz
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz
+.pnp.*

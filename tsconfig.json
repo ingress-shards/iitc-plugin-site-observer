@@ -1,12 +1,14 @@
 {
     "compilerOptions": {
-        "module": "ESNext",
-        "target": "ES2017",
-        "lib": ["ESNext", "DOM"],
+        "module": "ES2022",
+        "target": "ES2022",
+        "lib": ["ES2022", "dom"],
         "outDir": "dist/",
-        "moduleResolution": "node",
+        "moduleResolution": "Bundler",
+        "resolveJsonModule": true,
         "skipLibCheck": true,
-        "typeRoots": ["node_modules/@types", "types"],
+        "typeRoots": ["./node_modules/@types", "./types", "./node_modules/iitcpluginkit/types"],
+        "types": ["jquery", "build_constances", "greasemonkey", "iitc", "jqueryui", "leaflet", "images", "node"],
         "forceConsistentCasingInFileNames": true,
         "noImplicitReturns": true,
         "noImplicitAny": true,
@@ -18,5 +20,5 @@
     },
     "types": ["webpack-env"],
     "files": ["src/Main.ts"],
-    "include": ["types/*.d.ts", "./src/**/*.ts"]
+    "include": ["types/*.d.ts", "./src/**/*"]
 }

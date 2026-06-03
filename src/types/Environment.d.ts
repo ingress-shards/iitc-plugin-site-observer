@@ -3,6 +3,7 @@ declare const process: {
         APP_ENV: string;
         DATABASE_NAME: string;
         CONFIG_BASE_URL: string;
+        PLUGIN_ICON: string;
         [key: string]: string | undefined;
     };
 };

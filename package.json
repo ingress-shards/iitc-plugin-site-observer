@@ -1,16 +1,16 @@
 {
-    "name": "@ingress-shards/iitc-plugin-shards-observer",
+    "name": "@ingress-shards/iitc-plugin-site-observer",
     "version": "0.0.0-semantically-released",
-    "description": "Observes and records shard data from the Ingress Intel map",
+    "description": "Observes and records site data for Ingress Events.",
     "author": "Lewis Keen",
     "license": "MIT",
-    "homepage": "https://ingress-shards.github.io/iitc-plugin-shards-observer/",
+    "homepage": "https://ingress-shards.github.io/iitc-plugin-site-observer/",
     "repository": {
         "type": "git",
-        "url": "https://github.com/ingress-shards/iitc-plugin-shards-observer"
+        "url": "https://github.com/ingress-shards/iitc-plugin-site-observer"
     },
     "bugs": {
-        "url": "https://github.com/ingress-shards/iitc-plugin-shards-observer/issues"
+        "url": "https://github.com/ingress-shards/iitc-plugin-site-observer/issues"
     },
     "type": "module",
     "private": true,
@@ -22,12 +22,14 @@
         "autobuild": "webpack --watch --config webpack.dev.js",
         "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
         "lint": "eslint src",
-        "validate": "yarn clean && yarn lint && yarn build:prod"
+        "validate": "yarn clean && yarn lint && yarn build:prod",
+        "validate:docker": "node scripts/validate.js"
     },
     "dependencies": {
-        "@ingress-shards/shards-core": "^0.2.0",
+        "@ingress-shards/ingress-events-core": "0.4.0",
+        "idb": "^8.0.3",
         "iitcpluginkit": "^1.9.6",
-        "temporal-polyfill": "^0.3.0"
+        "temporal-polyfill": "0.3.2"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",
@@ -43,7 +45,8 @@
         "ts-node": "^10.9.2",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.52.0",
-        "webpack": "^5.104.1"
+        "webpack": "^5.104.1",
+        "webpack-bundle-analyzer": "^5.3.0"
     },
     "packageManager": "yarn@4.12.0"
 }
