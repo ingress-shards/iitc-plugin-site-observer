@@ -1,5 +1,7 @@
-# IITC Plugin - Shards Observer
+# IITC Plugin - Site Observer
 
-Observes and records shard data from the Ingress Intel map
+Observes and records site data for Ingress Events.
+
+Can export data for use with the [Ingress Shards Map](https://ingress-shards.github.io/) project.
 
 Created using the [IITC Plugin Kit](https://github.com/McBen/IITCPluginKit)
