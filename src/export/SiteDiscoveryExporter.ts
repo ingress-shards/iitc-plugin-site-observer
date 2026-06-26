@@ -27,6 +27,7 @@ export const SiteDiscoveryStrategy: ExportStrategy<SiteDiscovery> = {
                         lat: p.latE6 / 1e6,
                         lng: p.lngE6 / 1e6,
                         ornamentId: preEventEntry.ornId,
+                        guid: p.guid,
                     };
                 });
 
