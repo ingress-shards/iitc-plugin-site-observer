@@ -206,7 +206,7 @@ __metadata:
   resolution: "@ingress-shards/iitc-plugin-site-observer@workspace:."
   dependencies:
     "@eslint/js": "npm:^9.39.2"
-    "@ingress-shards/ingress-events-core": "npm:0.4.0"
+    "@ingress-shards/ingress-events-core": "npm:0.5.1"
     "@semantic-release/exec": "npm:^7.1.0"
     "@types/node": "npm:^25.0.9"
     concurrently: "npm:^9.2.1"
@@ -227,12 +227,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ingress-shards/ingress-events-core@npm:0.4.0":
-  version: 0.4.0
-  resolution: "@ingress-shards/ingress-events-core@npm:0.4.0::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.4.0%2F3b3c625432afa9966c08e07628bcd7e2f89f25e7"
+"@ingress-shards/ingress-events-core@npm:0.5.1":
+  version: 0.5.1
+  resolution: "@ingress-shards/ingress-events-core@npm:0.5.1::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.5.1%2F87126b13cb0e547f4ff263c2a820d66e8047a6a1"
   dependencies:
     temporal-polyfill: "npm:^0.3.0"
-  checksum: 10c0/e4e8c5b2b355c3f9b53f533d6554bd9d0d22c59b4cab0921e3d134631a5f72bd9e434b8c4931d55679a1b32f5b28f18c0b77abba7366a1df2eb1bcf873d4127c
+  checksum: 10c0/f0b80c00c7e9e214e59e95b3fc3fbd36e67d0fa134499a4b6d8e973b65c5729cc64fee92c186aff34489160e2cdab56a4abf8b2fdc40a7a6df837b95e2c8a1c2
   languageName: node
   linkType: hard
 
