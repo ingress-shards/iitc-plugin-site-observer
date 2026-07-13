@@ -224,3 +224,42 @@ button.observer-button {
     cursor: pointer;
     font-size: 0.8rem;
 }
+
+.observer-footer {
+    margin-top: 15px;
+    border-top: 1px solid var(--shards-border-color, #444);
+    padding-top: 10px;
+    display: flex;
+    justify-content: flex-start;
+    text-align: left;
+    flex-shrink: 0;
+}
+
+.developer-menu {
+    width: 100%;
+    border: 1px dashed #555;
+    border-radius: 4px;
+    background: #151515;
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.developer-menu summary {
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    padding: 5px 10px;
+}
+
+.developer-actions-content {
+    padding: 5px 10px 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+button.observer-button.warning-button {
+    background: #500;
+    border-color: #800;
+    color: #fff;
+}

@@ -2,7 +2,7 @@ import { zonedDateTimeISO } from "temporal-polyfill/fns/now";
 import { total } from "temporal-polyfill/fns/duration";
 import { since } from "temporal-polyfill/fns/zoneddatetime";
 import type { SeasonConfig, SiteConfig } from "@ingress-shards/ingress-events-core";
-import { ObserverCommand } from "../types/ObserverEvents";
+import { ObserverCommand, ObserverResult, UITrigger } from "../types/ObserverEvents";
 import { SiteRecordManager } from "../db/SiteRecordManager";
 import { SiteTableRenderer } from "./SiteTableRenderer";
 
@@ -21,6 +21,7 @@ export class ObserverDialog {
     private renderer: SiteTableRenderer;
 
     private lastDownloadJumpsTimestamp?: ReturnType<typeof zonedDateTimeISO>;
+    private dataUpdateListener = () => { void this.updateSiteTable(); };
 
     constructor(
         private seasonConfig: Record<string, SeasonConfig>,
@@ -31,6 +32,18 @@ export class ObserverDialog {
 
     public show() {
         this.siteConfigsByDate ??= SiteTableRenderer.getSiteConfigsByDate(this.seasonConfig);
+
+        const developmentMenuHtml = process.env.APP_ENV === "dev" ? `
+            <details class="developer-menu">
+                <summary class="ui-label">Developer Actions</summary>
+                <div class="developer-actions-content">
+                    <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download">Download Jumps</button>
+                    <button id="load-local-jumps-button" class="observer-button" title="Load Shard Jumps from Local JSON file">Load Local Jumps</button>
+                    <input type="file" id="local-jumps-file-input" style="display: none;" accept=".json" />
+                    <button id="clear-all-data-button" class="observer-button warning-button" title="Clear all site data from database">Clear All Site Data</button>
+                </div>
+            </details>
+        ` : '';
 
         const html = `
             <section>
@@ -46,10 +59,10 @@ export class ObserverDialog {
                                 )
                                 .join("")}
                         </select>
-                        <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download">Download Jumps</button>
                     </div>
                     <div id="sites-table-container"></div>
                 </main>
+                ${developmentMenuHtml ? `<footer class="observer-footer">${developmentMenuHtml}</footer>` : ''}
             </section>
         `;
 
@@ -61,6 +74,12 @@ export class ObserverDialog {
             width: 500,
         });
         this.$tableContainer = this.$dialog.find("#sites-table-container");
+
+        window.addEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
+
+        this.$dialog.on("dialogclose", () => {
+            window.removeEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
+        });
 
         this.$dialog.on("change", "#date-select", (event) => {
             this.selectedDate = $(event.target).val() as string;
@@ -91,23 +110,69 @@ export class ObserverDialog {
             );
         });
 
-        this.$dialog.on("click", ".go-to-site-btn", (event) => {
+        if (process.env.APP_ENV === "dev") {
+            this.$dialog.on("click", "#load-local-jumps-button", () => {
+                this.$dialog?.find("#local-jumps-file-input").trigger("click");
+            });
+
+            this.$dialog.on("change", "#local-jumps-file-input", (event) => {
+                const input = event.target as HTMLInputElement;
+                if (!input.files || input.files.length === 0) return;
+                const file = input.files[0];
+
+                file.text()
+                    .then((content) => {
+                        const data = JSON.parse(content);
+                        window.dispatchEvent(
+                            new CustomEvent(ObserverResult.SHARD_JUMPS_OBSERVED, {
+                                detail: data,
+                            }),
+                        );
+                        console.log("[Site Observer] Local shard jumps loaded successfully.");
+                        input.value = "";
+                    })
+                    .catch((error: unknown) => {
+                        console.error("[Site Observer] Failed to read or parse local shard jumps JSON:", error);
+                        alert("Failed to read or parse local shard jumps JSON. Check console for details.");
+                    });
+            });
+
+            this.$dialog.on("click", "#clear-all-data-button", async () => {
+                if (confirm("Are you sure you want to clear ALL site records from IndexedDB?")) {
+                    try {
+                        await this.dataManager.clearAll();
+                        console.log("[Site Observer] All site records cleared from database.");
+                        window.dispatchEvent(new CustomEvent(UITrigger.SIGNAL_DATA_UPDATE));
+                    } catch (error) {
+                        console.error("[Site Observer] Failed to clear site records:", error);
+                    }
+                }
+            });
+        }
+
+        this.$dialog.on("click", ".go-to-site-btn", async (event) => {
             const siteId = $(event.currentTarget).data("site-id") as string;
             this.selectedSiteId = siteId;
             const selectedSite: SiteConfig | undefined = Object.values(this.seasonConfig)
                 .flatMap((season) => Object.values(season.sites))
                 .find((site) => site.geocode.id === siteId);
             if (!selectedSite) return;
-            win.map.setView([selectedSite.geocode.latE6 / 1e6, selectedSite.geocode.lngE6 / 1e6], 15);
 
-            window.dispatchEvent(
-                new CustomEvent(ObserverCommand.FETCH_PRE_EVENT_ORNAMENTS, {
-                    detail: {
-                        siteId,
-                        timestamp: zonedDateTimeISO(),
-                    },
-                }),
-            );
+            let latE6 = selectedSite.geocode.latE6;
+            let lngE6 = selectedSite.geocode.lngE6;
+
+            try {
+                const siteRecord = await this.dataManager.get(siteId);
+                const centroid = siteRecord?.analysis?.centroid;
+                if (centroid) {
+                    latE6 = centroid.latE6;
+                    lngE6 = centroid.lngE6;
+                }
+            } catch (error) {
+                console.error(`[Site Observer: Dialog] Failed to retrieve site record for centroid:`, error);
+            }
+
+            win.map.setView([latE6 / 1e6, lngE6 / 1e6], 15);
 
             void this.updateSiteTable();
         });
@@ -125,6 +190,15 @@ export class ObserverDialog {
             const siteId = $(event.currentTarget).data("site-id") as string;
             window.dispatchEvent(
                 new CustomEvent(ObserverCommand.EXPORT_SITE_DISCOVERY, {
+                    detail: { siteId, timestamp: zonedDateTimeISO() },
+                }),
+            );
+        });
+
+        this.$dialog.on("click", ".export-targets-btn", (event) => {
+            const siteId = $(event.currentTarget).data("site-id") as string;
+            window.dispatchEvent(
+                new CustomEvent(ObserverCommand.EXPORT_SITE_TARGET_PORTALS, {
                     detail: { siteId, timestamp: zonedDateTimeISO() },
                 }),
             );

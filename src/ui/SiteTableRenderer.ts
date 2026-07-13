@@ -52,7 +52,10 @@ export class SiteTableRenderer {
                 const isHighlighted = selectedSiteId === site.geocode.id;
                 const status = this.getSiteStatus(site);
 
+                let totalPortalCount = 0;
                 let portalCount = 0;
+                let targetCount = 0;
+                let shardCount = 0;
                 let dimensionsHtml = "";
 
                 try {
@@ -60,12 +63,19 @@ export class SiteTableRenderer {
                     const portals = siteRecord?.observations?.portals
                         ? Object.values(siteRecord.observations.portals)
                         : [];
-                    const preEventPortals = portals.filter((p) => p.history.some((h) => h.type === "pre-event"));
+                    const preEventPortals = portals.filter((p) => p.history?.some((h) => h.type === "pre-event"));
+                    const targetPortals = portals.filter((p) => p.history?.some((h) => h.type === "target"));
+                    const shards = siteRecord?.observations?.shards
+                        ? Object.values(siteRecord.observations.shards)
+                        : [];
 
+                    totalPortalCount = portals.length;
                     portalCount = preEventPortals.length;
+                    targetCount = targetPortals.length;
+                    shardCount = shards.length;
                     if (portalCount > 1) {
                         const dimensions = calculateBoundingBoxDimensions(preEventPortals);
-                        dimensionsHtml = `<br/><span class="site-dimensions">Playbox: ${(dimensions.width / 1000).toFixed(1)}km x ${(dimensions.height / 1000).toFixed(1)}km</span>`;
+                        dimensionsHtml = `<span class="site-dimensions">Playbox: ${(dimensions.width / 1000).toFixed(1)}km x ${(dimensions.height / 1000).toFixed(1)}km</span>`;
                     }
                 } catch (error) {
                     console.error(
@@ -74,12 +84,21 @@ export class SiteTableRenderer {
                     );
                 }
 
+                const lines: string[] = [];
+                if (totalPortalCount > 0) lines.push(`Total Portals: ${totalPortalCount}`);
+                if (portalCount > 0) lines.push(`Ornamented Portals: ${portalCount}`);
+                if (targetCount > 0) lines.push(`Target Portals: ${targetCount}`);
+                if (shardCount > 0) lines.push(`Shards Observed: ${shardCount}`);
+                if (dimensionsHtml) lines.push(dimensionsHtml);
+
+                const hasObservations = lines.length > 0;
+
                 return `
             <tr class="shards-row-hover ${isHighlighted ? "shards-row-highlight" : ""}">
                 <td>
                     <div class="site-cell">
                         <div class="site-info">
-                            <span class="site-label">${site.geocode.label}</span><br />
+                            <span class="site-label">${site.geocode.name}</span><br />
                             <span class="site-status">${status}</span>
                         </div>
                         <button class="go-to-site-btn" data-site-id="${site.geocode.id}" title="Go to Site">
@@ -96,12 +115,19 @@ export class SiteTableRenderer {
                         </button>`
                                 : ""
                         }
+                        ${
+                            targetCount > 0
+                                ? `
+                        <button class="export-targets-btn" data-site-id="${site.geocode.id}" title="Export Targets JSON">
+                            ${getOrnamentSVG(UI_COLORS.TIE)}
+                        </button>`
+                                : ""
+                        }
                     </div>
                 </td>
                 <td class="observations-cell">
-                    <div class="observation-count ${portalCount > 0 ? "has-observations" : ""}">
-                        Ornamented Portals: ${portalCount}
-                        ${dimensionsHtml}
+                    <div class="observation-count ${hasObservations ? "has-observations" : ""}">
+                        ${lines.join("<br/>")}
                     </div>
                 </td>
             </tr>
