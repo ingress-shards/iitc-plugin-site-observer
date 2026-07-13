@@ -2,9 +2,11 @@ import * as ZonedDateTime from "temporal-polyfill/fns/zoneddatetime";
 import * as Now from "temporal-polyfill/fns/now";
 import * as Duration from "temporal-polyfill/fns/duration";
 import { formatDuration, SiteManager, type SeasonConfig } from "@ingress-shards/ingress-events-core";
-import { ObserverEventInput, ObserverCommand } from "./types/ObserverEvents";
+import { ObserverCommand } from "./types/ObserverEvents";
 
-export interface ObserverAlarm extends ObserverEventInput<void> {
+export interface ObserverAlarm {
+    siteId: string;
+    timestamp: ZonedDateTime.Record;
     type: ObserverCommand;
 }
 
@@ -127,7 +129,7 @@ export class ObserverScheduler {
             `[Site Observer: Alarm] Dispatching ${alarm.type} for ${alarm.siteId} at ${ZonedDateTime.toString(alarm.timestamp)}`,
         );
 
-        const event = new CustomEvent<ObserverEventInput<void>>(alarm.type, {
+        const event = new CustomEvent<ObserverAlarm>(alarm.type, {
             detail: {
                 ...alarm,
             },

@@ -14,7 +14,10 @@ export default merge(baseDevConfig, {
     resolve: {
         symlinks: true,
         alias: {
-            'temporal-polyfill': path.resolve(__dirname, 'node_modules/temporal-polyfill')
+            'temporal-polyfill': path.resolve(__dirname, 'node_modules/temporal-polyfill'),
+            '@ingress-shards/ingress-events-core$': path.resolve(__dirname, '../ingress-events-core/dist/index.mjs'),
+            '@ingress-shards/ingress-events-core/conf': path.resolve(__dirname, '../ingress-events-core/dist/conf'),
+            '@ingress-shards/ingress-events-core/visuals': path.resolve(__dirname, '../ingress-events-core/dist/visuals')
         }
     },
     mode: 'development',

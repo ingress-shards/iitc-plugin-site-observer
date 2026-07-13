@@ -1,17 +1,9 @@
-import * as ZonedDateTime from "temporal-polyfill/fns/zoneddatetime";
-
-export interface ObserverEventInput<T> {
-    siteId: string;
-    timestamp: ZonedDateTime.Record;
-    data?: T;
-}
-
 // 1. Commands (The "Do This" triggers)
 export enum ObserverCommand {
     FETCH_SHARD_JUMPS = "site-observer:command:fetch-shard-jumps",
-    FETCH_PRE_EVENT_ORNAMENTS = "site-observer:command:fetch-pre-event-ornaments",
     EXPORT_SITE_DATA = "site-observer:command:export-site-data",
     EXPORT_SITE_DISCOVERY = "site-observer:command:export-site-discovery",
+    EXPORT_SITE_TARGET_PORTALS = "site-observer:command:export-site-target-portals",
 }
 
 // 2. Results (The "I Did This" notifications)

@@ -22,4 +22,12 @@ export class SiteRecordManager {
         const database = await getDatabase();
         return database.get(this.STORE_NAME, siteId);
     }
+
+    /**
+     * Clear all site records from IndexedDB.
+     */
+    public async clearAll(): Promise<void> {
+        const database = await getDatabase();
+        await database.clear(this.STORE_NAME);
+    }
 }
