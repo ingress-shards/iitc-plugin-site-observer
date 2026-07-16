@@ -56,7 +56,11 @@ export class SiteTableRenderer {
                 let portalCount = 0;
                 let targetCount = 0;
                 let shardCount = 0;
+                let linkCount = 0;
                 let dimensionsHtml = "";
+                const waveLinksList: { wave: number; res: number; enl: number }[] = [];
+                let totalResistanceLinks = 0;
+                let totalEnlightenedLinks = 0;
 
                 try {
                     const siteRecord = await this.dataManager.get(site.geocode.id);
@@ -72,10 +76,34 @@ export class SiteTableRenderer {
                     totalPortalCount = portals.length;
                     portalCount = preEventPortals.length;
                     targetCount = targetPortals.length;
-                    shardCount = shards.length;
+                    shardCount = shards.reduce((accumulator, shard) => accumulator + (shard.history?.filter((h) => h.action === "spawn").length || 0), 0);
+                    linkCount = shards.reduce((accumulator, shard) => accumulator + (shard.history?.filter((h) => h.action === "link").length || 0), 0);
+
                     if (portalCount > 1) {
                         const dimensions = calculateBoundingBoxDimensions(preEventPortals);
                         dimensionsHtml = `<span class="site-dimensions">Playbox: ${(dimensions.width / 1000).toFixed(1)}km x ${(dimensions.height / 1000).toFixed(1)}km</span>`;
+                    }
+
+                    const waves = site.actionSchedule?.waves || [];
+                    for (const wave of waves) {
+                        let resistanceLinks = 0;
+                        let enlightenedLinks = 0;
+                        for (const shard of shards) {
+                            const history = shard.history || [];
+                            const waveHistory = history.filter(
+                                (h) => h.moveTime >= wave.start && h.moveTime <= wave.end && h.action === "link"
+                            );
+                            for (const h of waveHistory) {
+                                if (h.team === "RES") {
+                                    resistanceLinks++;
+                                } else if (h.team === "ENL") {
+                                    enlightenedLinks++;
+                                }
+                            }
+                        }
+                        waveLinksList.push({ wave: wave.waveNumber, res: resistanceLinks, enl: enlightenedLinks });
+                        totalResistanceLinks += resistanceLinks;
+                        totalEnlightenedLinks += enlightenedLinks;
                     }
                 } catch (error) {
                     console.error(
@@ -89,9 +117,41 @@ export class SiteTableRenderer {
                 if (portalCount > 0) lines.push(`Ornamented Portals: ${portalCount}`);
                 if (targetCount > 0) lines.push(`Target Portals: ${targetCount}`);
                 if (shardCount > 0) lines.push(`Shards Observed: ${shardCount}`);
+                if (linkCount > 0) lines.push(`Shard Links: ${linkCount}`);
                 if (dimensionsHtml) lines.push(dimensionsHtml);
 
-                const hasObservations = lines.length > 0;
+                let linkTableHtml = "";
+                if (waveLinksList.length > 0 && linkCount > 0) {
+                    const rowsHtml = waveLinksList.map(wl => `
+                        <tr>
+                            <td>${wl.wave}</td>
+                            <td class="faction-res">${wl.res}</td>
+                            <td class="faction-enl">${wl.enl}</td>
+                        </tr>
+                    `).join("");
+
+                    linkTableHtml = `
+                        <table class="links-table">
+                            <thead>
+                                <tr>
+                                    <th>Wave</th>
+                                    <th class="faction-res">RES</th>
+                                    <th class="faction-enl">ENL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                                <tr class="links-total-row">
+                                    <td>Total</td>
+                                    <td class="faction-res">${totalResistanceLinks}</td>
+                                    <td class="faction-enl">${totalEnlightenedLinks}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                const hasObservations = lines.length > 0 || linkTableHtml !== "";
 
                 return `
             <tr class="shards-row-hover ${isHighlighted ? "shards-row-highlight" : ""}">
@@ -101,33 +161,36 @@ export class SiteTableRenderer {
                             <span class="site-label">${site.geocode.name}</span><br />
                             <span class="site-status">${status}</span>
                         </div>
-                        <button class="go-to-site-btn" data-site-id="${site.geocode.id}" title="Go to Site">
-                            ${TACTICAL_MARKER_SVG.replace('class="marker-svg-pin"', `class="marker-svg-pin marker-site-inline" style="--pin-color: ${UI_COLORS.SIGNAL}"`)}
-                        </button>
-                        <button class="export-site-btn" data-site-id="${site.geocode.id}" title="Export JSON">
-                            ${EXPORT_ICON_SVG}
-                        </button>
-                        ${
-                            portalCount > 0
-                                ? `
-                        <button class="export-discovery-btn" data-site-id="${site.geocode.id}" title="Export Discovery JSON">
-                            ${getOrnamentSVG(UI_COLORS.SIGNAL)}
-                        </button>`
-                                : ""
-                        }
-                        ${
-                            targetCount > 0
-                                ? `
-                        <button class="export-targets-btn" data-site-id="${site.geocode.id}" title="Export Targets JSON">
-                            ${getOrnamentSVG(UI_COLORS.TIE)}
-                        </button>`
-                                : ""
-                        }
+                        <div class="site-buttons">
+                            <button class="go-to-site-btn" data-site-id="${site.geocode.id}" title="Go to Site">
+                                ${TACTICAL_MARKER_SVG.replace('class="marker-svg-pin"', `class="marker-svg-pin marker-site-inline" style="--pin-color: ${UI_COLORS.SIGNAL}"`)}
+                            </button>
+                            <button class="export-site-btn" data-site-id="${site.geocode.id}" title="Export Site Record">
+                                ${EXPORT_ICON_SVG}
+                            </button>
+                            ${
+                                portalCount > 0
+                                    ? `
+                            <button class="export-discovery-btn" data-site-id="${site.geocode.id}" title="Export Discovery JSON">
+                                ${getOrnamentSVG(UI_COLORS.SIGNAL)}
+                            </button>`
+                                    : ""
+                            }
+                            ${
+                                targetCount > 0
+                                    ? `
+                            <button class="export-targets-btn" data-site-id="${site.geocode.id}" title="Export Targets JSON">
+                                ${getOrnamentSVG(UI_COLORS.TIE)}
+                            </button>`
+                                    : ""
+                            }
+                        </div>
                     </div>
                 </td>
-                <td class="observations-cell">
+                 <td class="observations-cell">
                     <div class="observation-count ${hasObservations ? "has-observations" : ""}">
                         ${lines.join("<br/>")}
+                        ${linkTableHtml}
                     </div>
                 </td>
             </tr>
