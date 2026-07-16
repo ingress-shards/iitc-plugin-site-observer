@@ -1,12 +1,14 @@
 import * as ZonedDateTime from "temporal-polyfill/fns/zoneddatetime";
-import * as Now from "temporal-polyfill/fns/now";
 import * as Duration from "temporal-polyfill/fns/duration";
-import { formatDuration, SiteManager, type SeasonConfig } from "@ingress-shards/ingress-events-core";
+import * as Instant from "temporal-polyfill/fns/instant";
+import * as Now from "temporal-polyfill/fns/now";
+import { formatDuration, type SeasonConfig } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand } from "./types/ObserverEvents";
 
 export interface ObserverAlarm {
     siteId: string;
-    timestamp: ZonedDateTime.Record;
+    timestamp: number; // Epoch milliseconds
+    timeZone: string;
     type: ObserverCommand;
 }
 
@@ -22,53 +24,39 @@ export class ObserverScheduler {
         this.prepareRunQueue();
     }
 
-    /**
-     * Builds a sorted timetable of absolute timestamps for observation from loaded site configs.
-     */
     private buildTimetable(): void {
         for (const season of Object.values(this.seasonConfig)) {
-            for (const [siteId, { geocode, shardMechanics }] of Object.entries(season.sites)) {
-                if (!shardMechanics) continue;
+            for (const [siteId, { geocode, actionSchedule }] of Object.entries(season.sites)) {
+                if (!actionSchedule) continue;
 
-                const startTimeZoned = ZonedDateTime.fromString(geocode.startTime);
+                const { timeZone } = geocode;
 
-                const beforeStartTimeZoned = ZonedDateTime.add(startTimeZoned, Duration.fromFields({ minutes: -5 }));
+                // 1. Fetch 5 minutes before the event starts
                 this.pushAlarmToTimetable({
                     siteId,
-                    timestamp: beforeStartTimeZoned,
+                    timestamp: actionSchedule.start - 5 * 60 * 1000,
+                    timeZone,
                     type: ObserverCommand.FETCH_SHARD_JUMPS,
                 });
 
-                for (const wave of shardMechanics.waves) {
-                    const waveStartTimeZoned = ZonedDateTime.add(
-                        startTimeZoned,
-                        Duration.fromFields({ minutes: wave.startOffset }),
-                    );
-
-                    // Trigger a download for every waveAction that isn't a "no move"
-                    for (const waveAction of shardMechanics.waveActions.filter((a) =>
-                        ["spawn", "jump", "despawn"].includes(a.action),
-                    )) {
-                        const waveActionTimeZoned = ZonedDateTime.add(
-                            waveStartTimeZoned,
-                            Duration.fromFields({ minutes: waveAction.time + 1 }),
-                        );
+                // 2. Fetch for each wave action (spawns, jumps, despawns) plus a 1-minute delay
+                for (const wave of actionSchedule.waves) {
+                    if (!wave.shardsActions) continue;
+                    for (const shardAction of wave.shardsActions) {
                         this.pushAlarmToTimetable({
                             siteId,
-                            timestamp: waveActionTimeZoned,
+                            timestamp: shardAction.time + 1 * 60 * 1000,
+                            timeZone,
                             type: ObserverCommand.FETCH_SHARD_JUMPS,
                         });
                     }
                 }
 
-                // add a trigger for the end of the event
-                const endOfEventTimeZoned = ZonedDateTime.add(
-                    startTimeZoned,
-                    Duration.fromFields({ minutes: SiteManager.getEventDuration(shardMechanics) }),
-                );
+                // 3. Fetch at the end of the event (1 minute after actionSchedule.end)
                 this.pushAlarmToTimetable({
                     siteId,
-                    timestamp: endOfEventTimeZoned,
+                    timestamp: actionSchedule.end + 1 * 60 * 1000,
+                    timeZone,
                     type: ObserverCommand.FETCH_SHARD_JUMPS,
                 });
             }
@@ -76,17 +64,16 @@ export class ObserverScheduler {
     }
 
     pushAlarmToTimetable(trigger: ObserverAlarm) {
-        const now = Now.zonedDateTimeISO(ZonedDateTime.timeZoneId(trigger.timestamp));
-        if (
-            ZonedDateTime.compare(trigger.timestamp, now) <= 0 ||
-            Duration.total(ZonedDateTime.until(now, trigger.timestamp, { largestUnit: "days" }), {
-                unit: "milliseconds",
-            }) > MAX_TIMEOUT_MS
-        ) {
+        const now = Instant.epochMilliseconds(Now.instant());
+        const delay = trigger.timestamp - now;
+
+        if (delay <= 0 || delay > MAX_TIMEOUT_MS) {
             return;
         }
 
-        if (!this.observerTimetable[trigger.siteId]) this.observerTimetable[trigger.siteId] = [];
+        if (!this.observerTimetable[trigger.siteId]) {
+            this.observerTimetable[trigger.siteId] = [];
+        }
 
         this.observerTimetable[trigger.siteId].push(trigger);
     }
@@ -97,9 +84,7 @@ export class ObserverScheduler {
 
     private prepareRunQueue(): void {
         this.runQueue = Object.values(this.observerTimetable).flat();
-
-        this.runQueue.sort((a, b) => ZonedDateTime.compare(a.timestamp, b.timestamp));
-
+        this.runQueue.sort((a, b) => a.timestamp - b.timestamp);
         this.scheduleNextEvent();
     }
 
@@ -109,12 +94,11 @@ export class ObserverScheduler {
         const next = this.runQueue[0];
         if (!next) return;
 
-        const now = Now.zonedDateTimeISO(ZonedDateTime.timeZoneId(next.timestamp));
-        const duration = ZonedDateTime.until(now, next.timestamp, { largestUnit: "days" });
-        const delay = Math.max(0, Duration.total(duration, { unit: "milliseconds" }));
+        const delay = Math.max(0, next.timestamp - Instant.epochMilliseconds(Now.instant()));
+        const duration = Duration.fromFields({ milliseconds: delay });
 
         console.log(
-            `[Site Observer: Scheduler] Next alarm in ${formatDuration(duration)} for ${next.siteId} (delay ${delay} ms)`,
+            `[Site Observer: Scheduler] ${next.siteId} - Next (${next.type}) in ${formatDuration(duration)} (delay ${delay} ms)`,
         );
 
         this.activeTimer = setTimeout(() => {
@@ -125,14 +109,17 @@ export class ObserverScheduler {
     }
 
     private dispatchEvent(alarm: ObserverAlarm): void {
+        const localZdt = Instant.toZonedDateTimeISO(
+            Instant.fromEpochMilliseconds(alarm.timestamp),
+            alarm.timeZone,
+        );
+
         console.log(
-            `[Site Observer: Alarm] Dispatching ${alarm.type} for ${alarm.siteId} at ${ZonedDateTime.toString(alarm.timestamp)}`,
+            `[Site Observer: Alarm] ${alarm.siteId} - ${alarm.type} at ${ZonedDateTime.toString(localZdt)}`,
         );
 
         const event = new CustomEvent<ObserverAlarm>(alarm.type, {
-            detail: {
-                ...alarm,
-            },
+            detail: { ...alarm },
         });
         window.dispatchEvent(event);
     }

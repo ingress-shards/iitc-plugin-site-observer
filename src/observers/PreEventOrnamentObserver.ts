@@ -66,8 +66,6 @@ export class PreEventOrnamentObserver implements IntelObserver {
             portalsWithOrnaments++;
             const hasPreEventOrnament = portalData.ornaments.some((o: string) => this.preEventOrnamentIds.includes(o));
             
-            console.debug(`[Site Observer: Pre-Event Ornaments] Portal '${portalData.title}' (${portalData.guid}) has ornaments: ${JSON.stringify(portalData.ornaments)}. Match: ${hasPreEventOrnament}`);
-
             if (hasPreEventOrnament) {
                 detectedPortals.push({
                     guid: portalData.guid,
