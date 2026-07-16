@@ -1,7 +1,13 @@
 import { zonedDateTimeISO } from "temporal-polyfill/fns/now";
 import { total } from "temporal-polyfill/fns/duration";
 import { since } from "temporal-polyfill/fns/zoneddatetime";
-import type { SeasonConfig, SiteConfig } from "@ingress-shards/ingress-events-core";
+import {
+    parseTimestampFromFilename,
+    convertSiteDiscoveryToMapSnapshot,
+    type SeasonConfig,
+    type SiteConfig,
+    type SiteDiscovery,
+} from "@ingress-shards/ingress-events-core";
 import { ObserverCommand, ObserverResult, UITrigger } from "../types/ObserverEvents";
 import { SiteRecordManager } from "../db/SiteRecordManager";
 import { SiteTableRenderer } from "./SiteTableRenderer";
@@ -40,6 +46,8 @@ export class ObserverDialog {
                     <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download">Download Jumps</button>
                     <button id="load-local-jumps-button" class="observer-button" title="Load Shard Jumps from Local JSON file">Load Local Jumps</button>
                     <input type="file" id="local-jumps-file-input" style="display: none;" accept=".json" />
+                    <button id="load-local-ornaments-button" class="observer-button" title="Load Ornaments from Local JSON file">Load Ornaments</button>
+                    <input type="file" id="local-ornaments-file-input" style="display: none;" accept=".json" />
                     <button id="clear-all-data-button" class="observer-button warning-button" title="Clear all site data from database">Clear All Site Data</button>
                 </div>
             </details>
@@ -134,6 +142,46 @@ export class ObserverDialog {
                     .catch((error: unknown) => {
                         console.error("[Site Observer] Failed to read or parse local shard jumps JSON:", error);
                         alert("Failed to read or parse local shard jumps JSON. Check console for details.");
+                    });
+            });
+
+            this.$dialog.on("click", "#load-local-ornaments-button", () => {
+                this.$dialog?.find("#local-ornaments-file-input").trigger("click");
+            });
+
+            this.$dialog.on("change", "#local-ornaments-file-input", (event) => {
+                const input = event.target as HTMLInputElement;
+                if (!input.files || input.files.length === 0) return;
+                const file = input.files[0];
+
+                file.text()
+                    .then((content) => {
+                        const data = JSON.parse(content);
+
+                        // Parse timestamp from filename if available
+                        const parsedTimestamp = parseTimestampFromFilename(file.name);
+
+                        // Determine final timestamp
+                        const finalTimestamp = parsedTimestamp ?? (data && typeof data === "object" && "timestamp" in data ? (data.timestamp as number) : (data && typeof data === "object" && "exportedAt" in data ? (data.exportedAt as number) * 1000 : Date.now()));
+
+                        let snapshot = data;
+                        // Convert SiteDiscovery to MapSnapshot if detected
+                        if (data && typeof data === "object" && "siteId" in data && Array.isArray(data.portals)) {
+                            snapshot = convertSiteDiscoveryToMapSnapshot(data as SiteDiscovery, finalTimestamp);
+                        } else if (snapshot && typeof snapshot === "object") {
+                            snapshot.timestamp = finalTimestamp;
+                        }
+
+                        window.dispatchEvent(
+                            new CustomEvent(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, {
+                                detail: snapshot,
+                            }),
+                        );
+                        input.value = "";
+                    })
+                    .catch((error: unknown) => {
+                        console.error("[Site Observer] Failed to read or parse local ornaments JSON:", error);
+                        alert("Failed to read or parse local ornaments JSON. Check console for details.");
                     });
             });
 
