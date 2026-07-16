@@ -12,7 +12,7 @@ export class SiteRecordManager {
      */
     public async store(data: SiteRecord): Promise<void> {
         const database = await getDatabase();
-        await database.put(this.STORE_NAME, data, data.metadata.geocode.id);
+        await database.put(this.STORE_NAME, data, data.metadata.siteId);
     }
 
     /**

@@ -4,15 +4,13 @@ import seasonManifest from "@ingress-shards/ingress-events-core/conf/recent/seas
 import seasonGeocode from "@ingress-shards/ingress-events-core/conf/recent/season_geocode.json";
 
 import {
-    buildSeasonConfig,
+    EventConfigRegistry,
     type EventBlueprints,
     type Ornament,
     type ShardJumpCapture,
-    type SeasonConfig,
     type SeasonGeocode,
     type SeasonManifest,
     type MapSnapshot,
-    SiteId,
 } from "@ingress-shards/ingress-events-core";
 
 import { SiteRecordManager } from "./db/SiteRecordManager";
@@ -31,7 +29,7 @@ import { ShardJumpIngestionService } from "./services/ShardJumpIngestionService"
 import { PreEventOrnamentIngestionService } from "./services/PreEventOrnamentIngestionService";
 
 class SiteObserver implements Plugin.Class {
-    private seasonConfigCache: Record<string, SeasonConfig>;
+    private eventConfigRegistry: EventConfigRegistry;
 
     private siteRecordManager: SiteRecordManager;
     private shardJumpDataManager: ShardJumpDataManager;
@@ -49,7 +47,7 @@ class SiteObserver implements Plugin.Class {
     private dialog: ObserverDialog;
 
     constructor() {
-        this.seasonConfigCache = buildSeasonConfig({
+        this.eventConfigRegistry = new EventConfigRegistry({
             eventBlueprints: eventBlueprints as EventBlueprints,
             seasonManifest: seasonManifest as SeasonManifest,
             seasonGeocode: seasonGeocode as SeasonGeocode,
@@ -64,20 +62,20 @@ class SiteObserver implements Plugin.Class {
         );
 
         this.shardJumpIngestionService = new ShardJumpIngestionService(
-            this.seasonConfigCache,
+            this.eventConfigRegistry,
             this.siteRecordManager,
         );
         this.preEventOrnamentIngestionService = new PreEventOrnamentIngestionService(
             eventBlueprints.ornaments as Record<string, Ornament>,
-            this.seasonConfigCache,
+            this.eventConfigRegistry,
             this.siteRecordManager,
         );
 
-        this.observerScheduler = new ObserverScheduler(this.seasonConfigCache);
+        this.observerScheduler = new ObserverScheduler(this.eventConfigRegistry.seasons);
 
         this.dataExporter = new DataExporter(this.siteRecordManager);
 
-        this.dialog = new ObserverDialog(this.seasonConfigCache, this.siteRecordManager);
+        this.dialog = new ObserverDialog(this.eventConfigRegistry.seasons, this.siteRecordManager);
     }
 
     init() {
@@ -103,22 +101,22 @@ class SiteObserver implements Plugin.Class {
         });
 
         window.addEventListener(ObserverCommand.EXPORT_SITE_DATA, (event: Event) => {
-            const customEvent = event as CustomEvent<SiteId>;
-            this.dataExporter.run(customEvent.detail, SiteRecordStrategy).catch((error) => {
+            const customEvent = event as CustomEvent<{ siteId: string }>;
+            this.dataExporter.run(customEvent.detail.siteId, SiteRecordStrategy).catch((error) => {
                 console.error(`[Site Observer: Main] Failed to export site data:`, error);
             });
         });
 
         window.addEventListener(ObserverCommand.EXPORT_SITE_DISCOVERY, (event: Event) => {
-            const customEvent = event as CustomEvent<SiteId>;
-            this.dataExporter.run(customEvent.detail, SiteDiscoveryStrategy).catch((error) => {
+            const customEvent = event as CustomEvent<{ siteId: string }>;
+            this.dataExporter.run(customEvent.detail.siteId, SiteDiscoveryStrategy).catch((error) => {
                 console.error(`[Site Observer: Main] Failed to export site discovery:`, error);
             });
         });
 
         window.addEventListener(ObserverCommand.EXPORT_SITE_TARGET_PORTALS, (event: Event) => {
-            const customEvent = event as CustomEvent<SiteId>;
-            this.dataExporter.run(customEvent.detail, SiteTargetPortalStrategy).catch((error) => {
+            const customEvent = event as CustomEvent<{ siteId: string }>;
+            this.dataExporter.run(customEvent.detail.siteId, SiteTargetPortalStrategy).catch((error) => {
                 console.error(`[Site Observer: Main] Failed to export site target portals:`, error);
             });
         });
