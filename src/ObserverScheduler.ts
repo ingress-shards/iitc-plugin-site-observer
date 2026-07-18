@@ -123,4 +123,8 @@ export class ObserverScheduler {
         });
         window.dispatchEvent(event);
     }
+
+    public getNextAlarm(): ObserverAlarm | undefined {
+        return this.runQueue[0];
+    }
 }

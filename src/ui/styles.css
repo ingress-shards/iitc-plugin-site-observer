@@ -307,3 +307,16 @@ button.observer-button.warning-button {
 .faction-enl {
     color: var(--shards-faction-enl, #03dc03);
 }
+
+.observer-footer-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.next-alarm-label {
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+}

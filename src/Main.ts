@@ -11,6 +11,7 @@ import {
     type SeasonGeocode,
     type SeasonManifest,
     type MapSnapshot,
+    type SiteTargetPortals,
 } from "@ingress-shards/ingress-events-core";
 
 import { SiteRecordManager } from "./db/SiteRecordManager";
@@ -27,6 +28,7 @@ import { SiteTargetPortalStrategy } from "./export/SiteTargetPortalExporter";
 import { ObserverCommand, ObserverResult, UITrigger } from "./types/ObserverEvents";
 import { ShardJumpIngestionService } from "./services/ShardJumpIngestionService";
 import { PreEventOrnamentIngestionService } from "./services/PreEventOrnamentIngestionService";
+import { SiteTargetPortalIngestionService } from "./services/SiteTargetPortalIngestionService";
 
 class SiteObserver implements Plugin.Class {
     private eventConfigRegistry: EventConfigRegistry;
@@ -41,6 +43,7 @@ class SiteObserver implements Plugin.Class {
 
     private shardJumpIngestionService: ShardJumpIngestionService;
     private preEventOrnamentIngestionService: PreEventOrnamentIngestionService;
+    private siteTargetPortalIngestionService: SiteTargetPortalIngestionService;
 
     private dataExporter: DataExporter;
 
@@ -70,12 +73,16 @@ class SiteObserver implements Plugin.Class {
             this.eventConfigRegistry,
             this.siteRecordManager,
         );
+        this.siteTargetPortalIngestionService = new SiteTargetPortalIngestionService(
+            this.eventConfigRegistry,
+            this.siteRecordManager,
+        );
 
         this.observerScheduler = new ObserverScheduler(this.eventConfigRegistry.seasons);
 
         this.dataExporter = new DataExporter(this.siteRecordManager);
 
-        this.dialog = new ObserverDialog(this.eventConfigRegistry.seasons, this.siteRecordManager);
+        this.dialog = new ObserverDialog(this.eventConfigRegistry.seasons, this.siteRecordManager, this.observerScheduler);
     }
 
     init() {
@@ -97,6 +104,13 @@ class SiteObserver implements Plugin.Class {
             const customEvent = event as CustomEvent<MapSnapshot>;
             this.preEventOrnamentIngestionService.ingest(customEvent.detail).catch((error) => {
                 console.error(`[Site Observer: Main] Failed to ingest pre-event ornaments:`, error);
+            });
+        });
+
+        window.addEventListener(ObserverResult.SITE_TARGETS_OBSERVED, (event: Event) => {
+            const customEvent = event as CustomEvent<SiteTargetPortals>;
+            this.siteTargetPortalIngestionService.ingest(customEvent.detail).catch((error) => {
+                console.error(`[Site Observer: Main] Failed to ingest target portals:`, error);
             });
         });
 
@@ -122,7 +136,6 @@ class SiteObserver implements Plugin.Class {
         });
 
         const timetable = this.observerScheduler.getTimetable();
-        console.log(`[Site Observer: Timetable]`);
         for (const [siteId, triggers] of Object.entries(timetable)) {
             console.log(`[Site Observer: Timetable] ${siteId}: ${triggers.length} triggers`);
         }

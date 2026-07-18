@@ -11,6 +11,7 @@ export enum ObserverResult {
     SHARD_JUMPS_OBSERVED = "site-observer:event:shard-jumps-observed",
     PRE_EVENT_ORNAMENTS_OBSERVED = "site-observer:event:pre-event-ornaments-observed",
     SITE_DATA_EXPORTED = "site-observer:event:site-data-exported",
+    SITE_TARGETS_OBSERVED = "site-observer:event:site-targets-observed",
 }
 
 // 3. UI Updates (The "Redraw This" broadcasts)

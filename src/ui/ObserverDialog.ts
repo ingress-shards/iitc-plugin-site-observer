@@ -1,16 +1,19 @@
-import { zonedDateTimeISO } from "temporal-polyfill/fns/now";
+import { zonedDateTimeISO, instant } from "temporal-polyfill/fns/now";
 import { total } from "temporal-polyfill/fns/duration";
-import { since } from "temporal-polyfill/fns/zoneddatetime";
+import { since, until } from "temporal-polyfill/fns/zoneddatetime";
+import { fromEpochMilliseconds, toZonedDateTimeISO, epochMilliseconds } from "temporal-polyfill/fns/instant";
 import {
     parseTimestampFromFilename,
     convertSiteDiscoveryToMapSnapshot,
     type SeasonConfig,
     type SiteConfig,
     type SiteDiscovery,
+    formatDuration,
 } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand, ObserverResult, UITrigger } from "../types/ObserverEvents";
 import { SiteRecordManager } from "../db/SiteRecordManager";
 import { SiteTableRenderer } from "./SiteTableRenderer";
+import { ObserverScheduler } from "../ObserverScheduler";
 
 interface SiteObserverWindow extends Window {
     dialog: (options: { title: string; html: string; id: string; width: number }) => JQuery;
@@ -27,17 +30,33 @@ export class ObserverDialog {
     private renderer: SiteTableRenderer;
 
     private lastDownloadJumpsTimestamp?: ReturnType<typeof zonedDateTimeISO>;
+    private activeTimer?: number;
     private dataUpdateListener = () => { void this.updateSiteTable(); };
 
     constructor(
         private seasonConfig: Record<string, SeasonConfig>,
         private dataManager: SiteRecordManager,
+        private scheduler: ObserverScheduler,
     ) {
         this.renderer = new SiteTableRenderer(this.dataManager);
     }
 
     public show() {
         this.siteConfigsByDate ??= SiteTableRenderer.getSiteConfigsByDate(this.seasonConfig);
+
+        const nextAlarm = this.scheduler.getNextAlarm();
+        let nextAlarmHtml = "";
+        if (nextAlarm) {
+            const nowZoned = zonedDateTimeISO(nextAlarm.timeZone);
+            const alarmZoned = toZonedDateTimeISO(
+                fromEpochMilliseconds(nextAlarm.timestamp),
+                nextAlarm.timeZone,
+            );
+            const duration = until(nowZoned, alarmZoned, {
+                largestUnit: "day",
+            });
+            nextAlarmHtml = `<div class="next-alarm-label">next update in ${formatDuration(duration, true)}</div>`;
+        }
 
         const developmentMenuHtml = process.env.APP_ENV === "dev" ? `
             <details class="developer-menu">
@@ -46,12 +65,16 @@ export class ObserverDialog {
                     <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download">Download Jumps</button>
                     <button id="load-local-jumps-button" class="observer-button" title="Load Shard Jumps from Local JSON file">Load Local Jumps</button>
                     <input type="file" id="local-jumps-file-input" style="display: none;" accept=".json" />
+                    <button id="load-local-targets-button" class="observer-button" title="Load Target Portals from Local JSON file">Load Targets</button>
+                    <input type="file" id="local-targets-file-input" style="display: none;" accept=".json" />
                     <button id="load-local-ornaments-button" class="observer-button" title="Load Ornaments from Local JSON file">Load Ornaments</button>
                     <input type="file" id="local-ornaments-file-input" style="display: none;" accept=".json" />
                     <button id="clear-all-data-button" class="observer-button warning-button" title="Clear all site data from database">Clear All Site Data</button>
                 </div>
             </details>
         ` : '';
+
+        const showFooter = !!(nextAlarmHtml || developmentMenuHtml);
 
         const html = `
             <section>
@@ -70,7 +93,14 @@ export class ObserverDialog {
                     </div>
                     <div id="sites-table-container"></div>
                 </main>
-                ${developmentMenuHtml ? `<footer class="observer-footer">${developmentMenuHtml}</footer>` : ''}
+                ${showFooter ? `
+                <footer class="observer-footer">
+                    <div class="observer-footer-content">
+                        ${nextAlarmHtml}
+                        ${developmentMenuHtml}
+                    </div>
+                </footer>
+                ` : ''}
             </section>
         `;
 
@@ -87,6 +117,9 @@ export class ObserverDialog {
 
         this.$dialog.on("dialogclose", () => {
             window.removeEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
+            if (this.activeTimer) {
+                clearTimeout(this.activeTimer);
+            }
         });
 
         this.$dialog.on("change", "#date-select", (event) => {
@@ -142,6 +175,32 @@ export class ObserverDialog {
                     .catch((error: unknown) => {
                         console.error("[Site Observer] Failed to read or parse local shard jumps JSON:", error);
                         alert("Failed to read or parse local shard jumps JSON. Check console for details.");
+                    });
+            });
+
+            this.$dialog.on("click", "#load-local-targets-button", () => {
+                this.$dialog?.find("#local-targets-file-input").trigger("click");
+            });
+
+            this.$dialog.on("change", "#local-targets-file-input", (event) => {
+                const input = event.target as HTMLInputElement;
+                if (!input.files || input.files.length === 0) return;
+                const file = input.files[0];
+
+                file.text()
+                    .then((content) => {
+                        const data = JSON.parse(content);
+                        window.dispatchEvent(
+                            new CustomEvent(ObserverResult.SITE_TARGETS_OBSERVED, {
+                                detail: data,
+                            }),
+                        );
+                        console.log("[Site Observer] Local target portals loaded successfully.");
+                        input.value = "";
+                    })
+                    .catch((error: unknown) => {
+                        console.error("[Site Observer] Failed to read or parse local target portals JSON:", error);
+                        alert("Failed to read or parse local target portals JSON. Check console for details.");
                     });
             });
 
@@ -253,6 +312,41 @@ export class ObserverDialog {
         });
 
         void this.updateSiteTable();
+        this.scheduleNextUpdate();
+    }
+
+    private scheduleNextUpdate() {
+        const msToNextSecond = 1000 - (epochMilliseconds(instant()) % 1000);
+        this.activeTimer = window.setTimeout(() => {
+            this.updateAlarmCountdown();
+            
+            const nowMs = epochMilliseconds(instant());
+            if (Math.floor(nowMs / 1000) % 60 === 0) {
+                void this.updateSiteTable();
+            }
+            
+            this.scheduleNextUpdate();
+        }, msToNextSecond);
+    }
+
+    private updateAlarmCountdown() {
+        const nextAlarm = this.scheduler.getNextAlarm();
+        const $label = this.$dialog?.find(".next-alarm-label");
+        if (!$label || $label.length === 0) return;
+
+        if (nextAlarm) {
+            const nowZoned = zonedDateTimeISO(nextAlarm.timeZone);
+            const alarmZoned = toZonedDateTimeISO(
+                fromEpochMilliseconds(nextAlarm.timestamp),
+                nextAlarm.timeZone,
+            );
+            const duration = until(nowZoned, alarmZoned, {
+                largestUnit: "day",
+            });
+            $label.text(`next update in ${formatDuration(duration, true)}`);
+        } else {
+            $label.text("");
+        }
     }
 
     public async updateSiteTable() {

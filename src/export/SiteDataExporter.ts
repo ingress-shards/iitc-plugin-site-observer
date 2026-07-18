@@ -55,7 +55,7 @@ export class DataExporter {
      * Trigger a browser download for the provided JSON data.
      */
     private triggerDownload<T>(filename: string, data: T): void {
-        const json = JSON.stringify(data, undefined, 2);
+        const json = JSON.stringify(data);
         const blob = new Blob([json], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");

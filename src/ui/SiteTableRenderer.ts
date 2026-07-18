@@ -12,7 +12,7 @@ import {
     getOrnamentSVG,
     calculateBoundingBoxDimensions,
 } from "@ingress-shards/ingress-events-core";
-import type { SeasonConfig, SiteConfig } from "@ingress-shards/ingress-events-core";
+import type { SeasonConfig, SiteConfig, SiteRecord } from "@ingress-shards/ingress-events-core";
 import { SiteRecordManager } from "../db/SiteRecordManager";
 
 export class SiteTableRenderer {
@@ -58,12 +58,15 @@ export class SiteTableRenderer {
                 let shardCount = 0;
                 let linkCount = 0;
                 let dimensionsHtml = "";
-                const waveLinksList: { wave: number; res: number; enl: number }[] = [];
+                const waveLinksList: { wave: number; resistance: number; resistancePaths: number; enlightened: number; enlightenedPaths: number }[] = [];
                 let totalResistanceLinks = 0;
                 let totalEnlightenedLinks = 0;
+                const overallResistancePaths = new Set<string>();
+                const overallEnlightenedPaths = new Set<string>();
 
+                let siteRecord: SiteRecord | undefined;
                 try {
-                    const siteRecord = await this.dataManager.get(site.geocode.id);
+                    siteRecord = await this.dataManager.get(site.geocode.id);
                     const portals = siteRecord?.observations?.portals
                         ? Object.values(siteRecord.observations.portals)
                         : [];
@@ -85,23 +88,42 @@ export class SiteTableRenderer {
                     }
 
                     const waves = site.actionSchedule?.waves || [];
-                    for (const wave of waves) {
+                    for (const [, wave] of waves.entries()) {
                         let resistanceLinks = 0;
                         let enlightenedLinks = 0;
+                        const resistancePaths = new Set<string>();
+                        const enlightenedPaths = new Set<string>();
+
                         for (const shard of shards) {
                             const history = shard.history || [];
                             const waveHistory = history.filter(
                                 (h) => h.moveTime >= wave.start && h.moveTime <= wave.end && h.action === "link"
                             );
                             for (const h of waveHistory) {
+                                const destination = h.dest;
+                                if (destination === undefined) continue;
+                                const p1 = Math.min(h.portalId, destination);
+                                const p2 = Math.max(h.portalId, destination);
+                                const pathKey = `${p1}-${p2}`;
+
                                 if (h.team === "RES") {
                                     resistanceLinks++;
+                                    resistancePaths.add(pathKey);
+                                    overallResistancePaths.add(pathKey);
                                 } else if (h.team === "ENL") {
                                     enlightenedLinks++;
+                                    enlightenedPaths.add(pathKey);
+                                    overallEnlightenedPaths.add(pathKey);
                                 }
                             }
                         }
-                        waveLinksList.push({ wave: wave.waveNumber, res: resistanceLinks, enl: enlightenedLinks });
+                        waveLinksList.push({
+                            wave: wave.waveNumber,
+                            resistance: resistanceLinks,
+                            resistancePaths: resistancePaths.size,
+                            enlightened: enlightenedLinks,
+                            enlightenedPaths: enlightenedPaths.size,
+                        });
                         totalResistanceLinks += resistanceLinks;
                         totalEnlightenedLinks += enlightenedLinks;
                     }
@@ -117,18 +139,27 @@ export class SiteTableRenderer {
                 if (portalCount > 0) lines.push(`Ornamented Portals: ${portalCount}`);
                 if (targetCount > 0) lines.push(`Target Portals: ${targetCount}`);
                 if (shardCount > 0) lines.push(`Shards Observed: ${shardCount}`);
-                if (linkCount > 0) lines.push(`Shard Links: ${linkCount}`);
+                if (linkCount > 0) {
+                    lines.push(`Shard Links: ${linkCount}`);
+                }
                 if (dimensionsHtml) lines.push(dimensionsHtml);
 
                 let linkTableHtml = "";
                 if (waveLinksList.length > 0 && linkCount > 0) {
-                    const rowsHtml = waveLinksList.map(wl => `
-                        <tr>
-                            <td>${wl.wave}</td>
-                            <td class="faction-res">${wl.res}</td>
-                            <td class="faction-enl">${wl.enl}</td>
-                        </tr>
-                    `).join("");
+                    const rowsHtml = waveLinksList.map(wl => {
+                        const resistanceText = wl.resistance > 0 ? `${wl.resistance}` : "0";
+                        const enlightenedText = wl.enlightened > 0 ? `${wl.enlightened}` : "0";
+                        return `
+                            <tr>
+                                <td>${wl.wave}</td>
+                                <td class="faction-res">${resistanceText}</td>
+                                <td class="faction-enl">${enlightenedText}</td>
+                            </tr>
+                        `;
+                    }).join("");
+
+                    const totalResistanceText = totalResistanceLinks > 0 ? `${totalResistanceLinks}` : "0";
+                    const totalEnlightenedText = totalEnlightenedLinks > 0 ? `${totalEnlightenedLinks}` : "0";
 
                     linkTableHtml = `
                         <table class="links-table">
@@ -143,8 +174,8 @@ export class SiteTableRenderer {
                                 ${rowsHtml}
                                 <tr class="links-total-row">
                                     <td>Total</td>
-                                    <td class="faction-res">${totalResistanceLinks}</td>
-                                    <td class="faction-enl">${totalEnlightenedLinks}</td>
+                                    <td class="faction-res">${totalResistanceText}</td>
+                                    <td class="faction-enl">${totalEnlightenedText}</td>
                                 </tr>
                             </tbody>
                         </table>
