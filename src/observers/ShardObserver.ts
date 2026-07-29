@@ -1,5 +1,4 @@
-import * as Now from "temporal-polyfill/fns/now";
-import * as Instant from "temporal-polyfill/fns/instant";
+import * as Now from "temporal-polyfill/fns/Now";
 import { IntelObserver } from "./IntelObserver";
 import { ShardJumpDataManager } from "../db/ShardJumpDataManager";
 import { ObserverResult } from "../types/ObserverEvents";
@@ -16,16 +15,21 @@ export class ShardObserver implements IntelObserver {
             async ({ result }: { result: string }) => {
                 try {
                     const rawData = JSON.parse(result);
-                    const timestamp = Instant.epochMilliseconds(Now.instant());
+                    const timestamp = Now.instant().epochMilliseconds;
+
+                    const captureData: ShardJumpCapture = {
+                        ...rawData,
+                        timestamp,
+                    };
 
                     if (process.env.APP_ENV === "dev") {
-                        console.log("[Site Observer: Shard Jumps] Raw data", rawData);
-                        await this.dataManager.store(timestamp, rawData);
+                        console.log("[Site Observer: Shard Jumps] Raw data", captureData);
+                        await this.dataManager.store(timestamp, captureData);
                     }
 
                     window.dispatchEvent(
                         new CustomEvent<ShardJumpCapture>(ObserverResult.SHARD_JUMPS_OBSERVED, {
-                            detail: rawData as ShardJumpCapture,
+                            detail: captureData,
                         }),
                     );
                 } catch (error) {

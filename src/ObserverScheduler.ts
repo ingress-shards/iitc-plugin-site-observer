@@ -1,7 +1,7 @@
-import * as ZonedDateTime from "temporal-polyfill/fns/zoneddatetime";
-import * as Duration from "temporal-polyfill/fns/duration";
-import * as Instant from "temporal-polyfill/fns/instant";
-import * as Now from "temporal-polyfill/fns/now";
+import * as ZonedDateTime from "temporal-polyfill/fns/ZonedDateTime";
+import * as Duration from "temporal-polyfill/fns/Duration";
+import * as Instant from "temporal-polyfill/fns/Instant";
+import * as Now from "temporal-polyfill/fns/Now";
 import { formatDuration, type SeasonConfig } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand } from "./types/ObserverEvents";
 
@@ -26,21 +26,21 @@ export class ObserverScheduler {
 
     private buildTimetable(): void {
         for (const season of Object.values(this.seasonConfig)) {
-            for (const [siteId, { geocode, actionSchedule }] of Object.entries(season.sites)) {
-                if (!actionSchedule) continue;
+            for (const [siteId, { geocode, timeline }] of Object.entries(season.sites)) {
+                if (!timeline) continue;
 
                 const { timeZone } = geocode;
 
                 // 1. Fetch 5 minutes before the event starts
                 this.pushAlarmToTimetable({
                     siteId,
-                    timestamp: actionSchedule.start - 5 * 60 * 1000,
+                    timestamp: timeline.start - 5 * 60 * 1000,
                     timeZone,
                     type: ObserverCommand.FETCH_SHARD_JUMPS,
                 });
 
                 // 2. Fetch for each wave action (spawns, jumps, despawns) plus a 1-minute delay
-                for (const wave of actionSchedule.waves) {
+                for (const wave of timeline.shards) {
                     if (!wave.shardsActions) continue;
                     for (const shardAction of wave.shardsActions) {
                         this.pushAlarmToTimetable({
@@ -52,10 +52,10 @@ export class ObserverScheduler {
                     }
                 }
 
-                // 3. Fetch at the end of the event (1 minute after actionSchedule.end)
+                // 3. Fetch at the end of the event (1 minute after timeline.end)
                 this.pushAlarmToTimetable({
                     siteId,
-                    timestamp: actionSchedule.end + 1 * 60 * 1000,
+                    timestamp: timeline.end + 1 * 60 * 1000,
                     timeZone,
                     type: ObserverCommand.FETCH_SHARD_JUMPS,
                 });
@@ -63,8 +63,8 @@ export class ObserverScheduler {
         }
     }
 
-    pushAlarmToTimetable(trigger: ObserverAlarm) {
-        const now = Instant.epochMilliseconds(Now.instant());
+    private pushAlarmToTimetable(trigger: ObserverAlarm) {
+        const now = Now.instant().epochMilliseconds;
         const delay = trigger.timestamp - now;
 
         if (delay <= 0 || delay > MAX_TIMEOUT_MS) {
@@ -94,7 +94,7 @@ export class ObserverScheduler {
         const next = this.runQueue[0];
         if (!next) return;
 
-        const delay = Math.max(0, next.timestamp - Instant.epochMilliseconds(Now.instant()));
+        const delay = Math.max(0, next.timestamp - Now.instant().epochMilliseconds);
         const duration = Duration.fromFields({ milliseconds: delay });
 
         console.log(

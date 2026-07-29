@@ -1,5 +1,4 @@
-import { epochMilliseconds } from "temporal-polyfill/fns/instant";
-import { instant } from "temporal-polyfill/fns/now";
+import { instant } from "temporal-polyfill/fns/Now";
 import type {
     Ornament,
     MapPortalCapture,
@@ -81,7 +80,7 @@ export class PreEventOrnamentObserver implements IntelObserver {
 
         if (detectedPortals.length > 0) {
             const snapshot: MapSnapshot = {
-                timestamp: epochMilliseconds(instant()),
+                timestamp: instant().epochMilliseconds,
                 portals: detectedPortals,
             };
 

@@ -1,7 +1,7 @@
-import { zonedDateTimeISO, instant } from "temporal-polyfill/fns/now";
-import { total } from "temporal-polyfill/fns/duration";
-import { since, until } from "temporal-polyfill/fns/zoneddatetime";
-import { fromEpochMilliseconds, toZonedDateTimeISO, epochMilliseconds } from "temporal-polyfill/fns/instant";
+import { zonedDateTimeISO, instant } from "temporal-polyfill/fns/Now";
+import { total } from "temporal-polyfill/fns/Duration";
+import { diff as diffZonedDateTime } from "temporal-polyfill/fns/ZonedDateTime";
+import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 import {
     parseTimestampFromFilename,
     convertSiteDiscoveryToMapSnapshot,
@@ -9,6 +9,10 @@ import {
     type SiteConfig,
     type SiteDiscovery,
     formatDuration,
+    EXPORT_ICON_SVG,
+    getOrnamentSVG,
+    UI_COLORS,
+    getTargetOrnamentSVG,
 } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand, ObserverResult, UITrigger } from "../types/ObserverEvents";
 import { SiteRecordManager } from "../db/SiteRecordManager";
@@ -16,14 +20,20 @@ import { SiteTableRenderer } from "./SiteTableRenderer";
 import { ObserverScheduler } from "../ObserverScheduler";
 
 interface SiteObserverWindow extends Window {
-    dialog: (options: { title: string; html: string; id: string; width: number }) => JQuery;
+    dialog: (options: { title: string; html: string; id: string; width: number; resizable?: boolean }) => JQuery;
     map: L.Map;
+}
+
+export interface DialogState {
+    selectedDate?: string;
+    selectedSiteId?: string;
+    openSites: Record<string, boolean>;
+    position: { left: number; top: number };
 }
 
 export class ObserverDialog {
     private siteConfigsByDate?: Record<string, SiteConfig[]>;
-    private selectedDate?: string;
-    private selectedSiteId?: string;
+    private dialogState: DialogState;
 
     private $dialog?: JQuery;
     private $tableContainer?: JQuery;
@@ -38,7 +48,11 @@ export class ObserverDialog {
         private dataManager: SiteRecordManager,
         private scheduler: ObserverScheduler,
     ) {
-        this.renderer = new SiteTableRenderer(this.dataManager);
+        this.renderer = new SiteTableRenderer(this.dataManager, this.seasonConfig);
+        this.dialogState = {
+            openSites: {},
+            position: { left: 60, top: 40 }
+        };
     }
 
     public show() {
@@ -52,29 +66,46 @@ export class ObserverDialog {
                 fromEpochMilliseconds(nextAlarm.timestamp),
                 nextAlarm.timeZone,
             );
-            const duration = until(nowZoned, alarmZoned, {
+            const duration = diffZonedDateTime(nowZoned, alarmZoned, {
                 largestUnit: "day",
             });
             nextAlarmHtml = `<div class="next-alarm-label">next update in ${formatDuration(duration, true)}</div>`;
         }
 
-        const developmentMenuHtml = process.env.APP_ENV === "dev" ? `
-            <details class="developer-menu">
-                <summary class="ui-label">Developer Actions</summary>
-                <div class="developer-actions-content">
-                    <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download">Download Jumps</button>
-                    <button id="load-local-jumps-button" class="observer-button" title="Load Shard Jumps from Local JSON file">Load Local Jumps</button>
-                    <input type="file" id="local-jumps-file-input" style="display: none;" accept=".json" />
-                    <button id="load-local-targets-button" class="observer-button" title="Load Target Portals from Local JSON file">Load Targets</button>
-                    <input type="file" id="local-targets-file-input" style="display: none;" accept=".json" />
+        const actionMenuHtml = `
+            <details class="actions-menu">
+            <summary class="ui-label">Actions</summary>
+                <div class="site-actions">
+                    <span class="selected-site">Selected Site: <strong id="selected-site-name"></strong></span>
+                    
+                    <div class="export-action-menu">
+                        <button class="export-site-record-button" title="Export Site Record">
+                            ${EXPORT_ICON_SVG}
+                        </button>
+                        <button class="export-ornaments-button" title="Export Pre-Event Ornaments">
+                            ${getOrnamentSVG(UI_COLORS.SIGNAL)}
+                        </button>
+                        <button class="export-targets-button" title="Export Target Portals">
+                            ${getTargetOrnamentSVG(UI_COLORS.SIGNAL)}
+                        </button>
+                    </div>
+                </div>
+                <div class="load-action-menu">
+                    <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download from Intel site">Download Shard Jumps</button>
                     <button id="load-local-ornaments-button" class="observer-button" title="Load Ornaments from Local JSON file">Load Ornaments</button>
                     <input type="file" id="local-ornaments-file-input" style="display: none;" accept=".json" />
+                    <button id="load-local-targets-button" class="observer-button" title="Load Target Portals from Local JSON file">Load Targets</button>
+                    <input type="file" id="local-targets-file-input" style="display: none;" accept=".json" />
+                    <button id="load-local-jumps-button" class="observer-button" title="Load Shard Jumps from Local JSON file">Load Shard Jumps</button>
+                    <input type="file" id="local-jumps-file-input" style="display: none;" accept=".json" />
+                </div>
+                <div class="danger-zone-menu">
                     <button id="clear-all-data-button" class="observer-button warning-button" title="Clear all site data from database">Clear All Site Data</button>
                 </div>
             </details>
-        ` : '';
+        `;
 
-        const showFooter = !!(nextAlarmHtml || developmentMenuHtml);
+        const showFooter = !!(nextAlarmHtml || actionMenuHtml);
 
         const html = `
             <section>
@@ -86,7 +117,7 @@ export class ObserverDialog {
                             ${Object.keys(this.siteConfigsByDate)
                                 .map(
                                     (date) =>
-                                        `<option value="${date}" ${date === this.selectedDate ? "selected" : ""}>${date}</option>`,
+                                        `<option value="${date}" ${date === this.dialogState.selectedDate ? "selected" : ""}>${date}</option>`,
                                 )
                                 .join("")}
                         </select>
@@ -97,7 +128,7 @@ export class ObserverDialog {
                 <footer class="observer-footer">
                     <div class="observer-footer-content">
                         ${nextAlarmHtml}
-                        ${developmentMenuHtml}
+                        ${actionMenuHtml}
                     </div>
                 </footer>
                 ` : ''}
@@ -110,11 +141,16 @@ export class ObserverDialog {
             html: html,
             id: "site-observer",
             width: 500,
+            resizable: false,
         });
         this.$tableContainer = this.$dialog.find("#sites-table-container");
 
-        window.addEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
+        if (this.dialogState.position) {
+            this.$dialog.parent().offset(this.dialogState.position);
+        }
 
+        window.addEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
+        
         this.$dialog.on("dialogclose", () => {
             window.removeEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
             if (this.activeTimer) {
@@ -122,21 +158,42 @@ export class ObserverDialog {
             }
         });
 
+        this.$dialog.on("dialogdragstop", () => {
+            const offset = this.$dialog?.parent().offset();
+            if (offset) {
+                this.dialogState.position = {
+                    left: offset.left,
+                    top: offset.top,
+                };
+            }
+        });
+
         this.$dialog.on("change", "#date-select", (event) => {
-            this.selectedDate = $(event.target).val() as string;
+            this.dialogState.selectedDate = $(event.target).val() as string;
             void this.updateSiteTable();
+        });
+
+        this.$dialog.on("click", "summary", (event) => {
+            if ($(event.target).closest("button").length > 0) {
+                return;
+            }
+            const $details = $(event.currentTarget).closest("details");
+            const siteId = $details.data("site-id") as string;
+            if (siteId) {
+                this.dialogState.openSites[siteId] = !$details.prop("open");
+            }
         });
 
         this.$dialog.on("click", "#manual-download-jumps-button", () => {
             const now = zonedDateTimeISO("UTC");
             const timeSinceLastDownload =
                 this.lastDownloadJumpsTimestamp &&
-                total(since(now, this.lastDownloadJumpsTimestamp), {
+                total(diffZonedDateTime(this.lastDownloadJumpsTimestamp, now), {
                     unit: "second",
                 });
             if (timeSinceLastDownload && timeSinceLastDownload < 60) {
-                console.log(
-                    `[Site Observer] Too soon to download shard jumps, please wait ${60 - Math.abs(timeSinceLastDownload)} seconds`,
+                alert(
+                    `Please wait ${60 - Math.abs(timeSinceLastDownload)} seconds before download the shard jumps again.`,
                 );
                 return;
             }
@@ -151,115 +208,132 @@ export class ObserverDialog {
             );
         });
 
-        if (process.env.APP_ENV === "dev") {
-            this.$dialog.on("click", "#load-local-jumps-button", () => {
-                this.$dialog?.find("#local-jumps-file-input").trigger("click");
-            });
+        this.$dialog.on("click", "#load-local-jumps-button", () => {
+            this.$dialog?.find("#local-jumps-file-input").trigger("click");
+        });
 
-            this.$dialog.on("change", "#local-jumps-file-input", (event) => {
-                const input = event.target as HTMLInputElement;
-                if (!input.files || input.files.length === 0) return;
-                const file = input.files[0];
+        this.$dialog.on("change", "#local-jumps-file-input", (event) => {
+            const input = event.target as HTMLInputElement;
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
 
-                file.text()
-                    .then((content) => {
-                        const data = JSON.parse(content);
-                        window.dispatchEvent(
-                            new CustomEvent(ObserverResult.SHARD_JUMPS_OBSERVED, {
-                                detail: data,
-                            }),
-                        );
-                        console.log("[Site Observer] Local shard jumps loaded successfully.");
-                        input.value = "";
-                    })
-                    .catch((error: unknown) => {
-                        console.error("[Site Observer] Failed to read or parse local shard jumps JSON:", error);
-                        alert("Failed to read or parse local shard jumps JSON. Check console for details.");
-                    });
-            });
-
-            this.$dialog.on("click", "#load-local-targets-button", () => {
-                this.$dialog?.find("#local-targets-file-input").trigger("click");
-            });
-
-            this.$dialog.on("change", "#local-targets-file-input", (event) => {
-                const input = event.target as HTMLInputElement;
-                if (!input.files || input.files.length === 0) return;
-                const file = input.files[0];
-
-                file.text()
-                    .then((content) => {
-                        const data = JSON.parse(content);
-                        window.dispatchEvent(
-                            new CustomEvent(ObserverResult.SITE_TARGETS_OBSERVED, {
-                                detail: data,
-                            }),
-                        );
-                        console.log("[Site Observer] Local target portals loaded successfully.");
-                        input.value = "";
-                    })
-                    .catch((error: unknown) => {
-                        console.error("[Site Observer] Failed to read or parse local target portals JSON:", error);
-                        alert("Failed to read or parse local target portals JSON. Check console for details.");
-                    });
-            });
-
-            this.$dialog.on("click", "#load-local-ornaments-button", () => {
-                this.$dialog?.find("#local-ornaments-file-input").trigger("click");
-            });
-
-            this.$dialog.on("change", "#local-ornaments-file-input", (event) => {
-                const input = event.target as HTMLInputElement;
-                if (!input.files || input.files.length === 0) return;
-                const file = input.files[0];
-
-                file.text()
-                    .then((content) => {
-                        const data = JSON.parse(content);
-
-                        // Parse timestamp from filename if available
-                        const parsedTimestamp = parseTimestampFromFilename(file.name);
-
-                        // Determine final timestamp
-                        const finalTimestamp = parsedTimestamp ?? (data && typeof data === "object" && "timestamp" in data ? (data.timestamp as number) : (data && typeof data === "object" && "exportedAt" in data ? (data.exportedAt as number) * 1000 : Date.now()));
-
-                        let snapshot = data;
-                        // Convert SiteDiscovery to MapSnapshot if detected
-                        if (data && typeof data === "object" && "siteId" in data && Array.isArray(data.portals)) {
-                            snapshot = convertSiteDiscoveryToMapSnapshot(data as SiteDiscovery, finalTimestamp);
-                        } else if (snapshot && typeof snapshot === "object") {
-                            snapshot.timestamp = finalTimestamp;
-                        }
-
-                        window.dispatchEvent(
-                            new CustomEvent(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, {
-                                detail: snapshot,
-                            }),
-                        );
-                        input.value = "";
-                    })
-                    .catch((error: unknown) => {
-                        console.error("[Site Observer] Failed to read or parse local ornaments JSON:", error);
-                        alert("Failed to read or parse local ornaments JSON. Check console for details.");
-                    });
-            });
-
-            this.$dialog.on("click", "#clear-all-data-button", async () => {
-                if (confirm("Are you sure you want to clear ALL site records from IndexedDB?")) {
-                    try {
-                        await this.dataManager.clearAll();
-                        console.log("[Site Observer] All site records cleared from database.");
-                        window.dispatchEvent(new CustomEvent(UITrigger.SIGNAL_DATA_UPDATE));
-                    } catch (error) {
-                        console.error("[Site Observer] Failed to clear site records:", error);
+            file.text()
+                .then((content) => {
+                    const data = JSON.parse(content);
+                    const parsedTimestamp = parseTimestampFromFilename(file.name);
+                    if (parsedTimestamp === undefined) {
+                        throw new Error(`Could not parse timestamp from filename: ${file.name}`);
                     }
+
+                    const captureData = {
+                        ...data,
+                        timestamp: parsedTimestamp,
+                    };
+
+                    window.dispatchEvent(
+                        new CustomEvent(ObserverResult.SHARD_JUMPS_OBSERVED, {
+                            detail: captureData,
+                        }),
+                    );
+                    console.log("[Site Observer] Local shard jumps loaded successfully.");
+                    input.value = "";
+                })
+                .catch((error: unknown) => {
+                    console.error("[Site Observer] Failed to read or parse local shard jumps JSON:", error);
+                    alert(error instanceof Error ? error.message : "Failed to read or parse local shard jumps JSON. Check console for details.");
+                });
+        });
+
+        this.$dialog.on("click", "#load-local-targets-button", () => {
+            this.$dialog?.find("#local-targets-file-input").trigger("click");
+        });
+
+        this.$dialog.on("change", "#local-targets-file-input", (event) => {
+            const input = event.target as HTMLInputElement;
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+
+            file.text()
+                .then((content) => {
+                    const data = JSON.parse(content);
+                    window.dispatchEvent(
+                        new CustomEvent(ObserverResult.SITE_TARGETS_OBSERVED, {
+                            detail: data,
+                        }),
+                    );
+                    console.log("[Site Observer] Local target portals loaded successfully.");
+                    input.value = "";
+                })
+                .catch((error: unknown) => {
+                    console.error("[Site Observer] Failed to read or parse local target portals JSON:", error);
+                    alert("Failed to read or parse local target portals JSON. Check console for details.");
+                });
+        });
+
+        this.$dialog.on("click", "#load-local-ornaments-button", () => {
+            this.$dialog?.find("#local-ornaments-file-input").trigger("click");
+        });
+
+        this.$dialog.on("change", "#local-ornaments-file-input", (event) => {
+            const input = event.target as HTMLInputElement;
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+
+            file.text()
+                .then((content) => {
+                    const data = JSON.parse(content);
+
+                    // Parse timestamp from filename if available
+                    const parsedTimestamp = parseTimestampFromFilename(file.name);
+                    if (parsedTimestamp === undefined) {
+                        throw new Error(`Could not parse timestamp from filename: ${file.name}`);
+                    }
+
+                    const finalTimestamp = parsedTimestamp;
+
+                    let snapshot = data;
+                    // Convert SiteDiscovery to MapSnapshot if detected
+                    if (data && typeof data === "object" && "siteId" in data && Array.isArray(data.portals)) {
+                        snapshot = convertSiteDiscoveryToMapSnapshot(data as SiteDiscovery, finalTimestamp);
+                    } else if (snapshot && typeof snapshot === "object") {
+                        snapshot.timestamp = finalTimestamp;
+                    }
+
+                    window.dispatchEvent(
+                        new CustomEvent(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, {
+                            detail: snapshot,
+                        }),
+                    );
+                    input.value = "";
+                })
+                .catch((error: unknown) => {
+                    console.error("[Site Observer] Failed to read or parse local ornaments JSON:", error);
+                    alert(error instanceof Error ? error.message : "Failed to read or parse local ornaments JSON. Check console for details.");
+                });
+        });
+
+        this.$dialog.on("click", "#clear-all-data-button", async () => {
+            if (confirm("Are you sure you want to clear ALL site records from the local database?")) {
+                try {
+                    await this.dataManager.clearAll();
+                    console.log("[Site Observer] All site records cleared from database.");
+                    window.dispatchEvent(new CustomEvent(UITrigger.SIGNAL_DATA_UPDATE));
+                } catch (error) {
+                    console.error("[Site Observer] Failed to clear site records:", error);
                 }
-            });
-        }
+            }
+        });
+
+        this.$dialog.on("click", "details.site-details", (event) => {
+            const siteId = $(event.currentTarget).data("site-id") as string;
+            this.dialogState.selectedSiteId = siteId;
+            void this.updateSiteTable();
+            this.updateSelectedSiteText();
+        })
 
         this.$dialog.on("click", ".go-to-site-btn", async (event) => {
             const siteId = $(event.currentTarget).data("site-id") as string;
-            this.selectedSiteId = siteId;
+            this.dialogState.selectedSiteId = siteId;
             const selectedSite: SiteConfig | undefined = Object.values(this.seasonConfig)
                 .flatMap((season) => Object.values(season.sites))
                 .find((site) => site.geocode.id === siteId);
@@ -284,43 +358,53 @@ export class ObserverDialog {
             void this.updateSiteTable();
         });
 
-        this.$dialog.on("click", ".export-site-btn", (event) => {
-            const siteId = $(event.currentTarget).data("site-id") as string;
+        this.$dialog.on("click", ".export-site-record-button", () => {
             window.dispatchEvent(
                 new CustomEvent(ObserverCommand.EXPORT_SITE_DATA, {
-                    detail: { siteId, timestamp: zonedDateTimeISO() },
+                    detail: { siteId: this.dialogState.selectedSiteId },
                 }),
             );
         });
 
-        this.$dialog.on("click", ".export-discovery-btn", (event) => {
-            const siteId = $(event.currentTarget).data("site-id") as string;
+        this.$dialog.on("click", ".export-ornaments-button", () => {
             window.dispatchEvent(
                 new CustomEvent(ObserverCommand.EXPORT_SITE_DISCOVERY, {
-                    detail: { siteId, timestamp: zonedDateTimeISO() },
+                    detail: { siteId: this.dialogState.selectedSiteId },
                 }),
             );
         });
 
-        this.$dialog.on("click", ".export-targets-btn", (event) => {
-            const siteId = $(event.currentTarget).data("site-id") as string;
+        this.$dialog.on("click", ".export-targets-button", () => {
             window.dispatchEvent(
                 new CustomEvent(ObserverCommand.EXPORT_SITE_TARGET_PORTALS, {
-                    detail: { siteId, timestamp: zonedDateTimeISO() },
+                    detail: { siteId: this.dialogState.selectedSiteId },
                 }),
             );
         });
 
         void this.updateSiteTable();
+        this.updateSelectedSiteText();
         this.scheduleNextUpdate();
     }
 
+    private updateSelectedSiteText() {
+        const {selectedSiteId, selectedDate} = this.dialogState;
+        if (selectedSiteId && selectedDate) {
+            const site = this.siteConfigsByDate?.[selectedDate].find(
+                (site) => site.geocode.id === selectedSiteId,
+            );
+            if (site) {
+                this.$dialog?.find("#selected-site-name").text(`${site.geocode.name} (${selectedDate})`);
+            }
+        }
+    }
+
     private scheduleNextUpdate() {
-        const msToNextSecond = 1000 - (epochMilliseconds(instant()) % 1000);
+        const msToNextSecond = 1000 - (instant().epochMilliseconds % 1000);
         this.activeTimer = window.setTimeout(() => {
             this.updateAlarmCountdown();
             
-            const nowMs = epochMilliseconds(instant());
+            const nowMs = instant().epochMilliseconds;
             if (Math.floor(nowMs / 1000) % 60 === 0) {
                 void this.updateSiteTable();
             }
@@ -340,7 +424,7 @@ export class ObserverDialog {
                 fromEpochMilliseconds(nextAlarm.timestamp),
                 nextAlarm.timeZone,
             );
-            const duration = until(nowZoned, alarmZoned, {
+            const duration = diffZonedDateTime(nowZoned, alarmZoned, {
                 largestUnit: "day",
             });
             $label.text(`next update in ${formatDuration(duration, true)}`);
@@ -350,13 +434,12 @@ export class ObserverDialog {
     }
 
     public async updateSiteTable() {
-        if (!this.$tableContainer || !this.selectedDate || !this.siteConfigsByDate) return;
+        if (!this.$tableContainer || !this.siteConfigsByDate || !this.dialogState) return;
 
         try {
             const tableHtml = await this.renderer.generateSitesTableHtml(
-                this.selectedDate,
                 this.siteConfigsByDate,
-                this.selectedSiteId,
+                this.dialogState,
             );
             this.$tableContainer.html(tableHtml);
         } catch (error) {

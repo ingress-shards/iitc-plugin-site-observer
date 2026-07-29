@@ -19,4 +19,5 @@ export enum UITrigger {
     UPDATE_SITE_STATUS = "site-observer:ui:update-site-status",
     UPDATE_SITE_OBSERVATIONS = "site-observer:ui:update-site-observations",
     SIGNAL_DATA_UPDATE = "site-observer:ui:signal-data-update",
+    SITE_SELECTED = "site-observer:ui:site-selected",
 }
