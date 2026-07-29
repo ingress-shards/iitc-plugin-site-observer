@@ -30,4 +30,12 @@ export class SiteRecordManager {
         const database = await getDatabase();
         await database.clear(this.STORE_NAME);
     }
+
+    /**
+     * Delete data for a specific site.
+     */
+    public async delete(siteId: string): Promise<void> {
+        const database = await getDatabase();
+        await database.delete(this.STORE_NAME, siteId);
+    }
 }

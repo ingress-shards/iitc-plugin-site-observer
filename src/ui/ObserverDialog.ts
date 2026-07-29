@@ -69,7 +69,7 @@ export class ObserverDialog {
             const duration = diffZonedDateTime(nowZoned, alarmZoned, {
                 largestUnit: "day",
             });
-            nextAlarmHtml = `<div class="next-alarm-label">next update in ${formatDuration(duration, true)}</div>`;
+            nextAlarmHtml = `<div class="next-alarm-label">next data update in ${formatDuration(duration, true)}</div>`;
         }
 
         const actionMenuHtml = `
@@ -87,6 +87,9 @@ export class ObserverDialog {
                         </button>
                         <button class="export-targets-button" title="Export Target Portals">
                             ${getTargetOrnamentSVG(UI_COLORS.SIGNAL)}
+                        </button>
+                        <button class="clear-site-data-button observer-button warning-button" title="Clear data for the selected site">
+                            Clear Data
                         </button>
                     </div>
                 </div>
@@ -382,6 +385,27 @@ export class ObserverDialog {
             );
         });
 
+        this.$dialog.on("click", ".clear-site-data-button", async () => {
+            const siteId = this.dialogState.selectedSiteId;
+            if (!siteId) return;
+
+            const { selectedDate } = this.dialogState;
+            const site = selectedDate ? this.siteConfigsByDate?.[selectedDate]?.find(
+                (s) => s.geocode.id === siteId,
+            ) : undefined;
+            const siteName = site?.geocode.name ?? siteId;
+
+            if (confirm(`Are you sure you want to clear site data for ${siteName}?`)) {
+                try {
+                    await this.dataManager.delete(siteId);
+                    console.log(`[Site Observer] Site record for ${siteId} cleared.`);
+                    window.dispatchEvent(new CustomEvent(UITrigger.SIGNAL_DATA_UPDATE));
+                } catch (error) {
+                    console.error(`[Site Observer] Failed to clear site data for ${siteId}:`, error);
+                }
+            }
+        });
+
         void this.updateSiteTable();
         this.updateSelectedSiteText();
         this.scheduleNextUpdate();
@@ -427,7 +451,7 @@ export class ObserverDialog {
             const duration = diffZonedDateTime(nowZoned, alarmZoned, {
                 largestUnit: "day",
             });
-            $label.text(`next update in ${formatDuration(duration, true)}`);
+            $label.text(`next data update in ${formatDuration(duration, true)}`);
         } else {
             $label.text("");
         }

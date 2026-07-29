@@ -349,13 +349,17 @@
     text-overflow: ellipsis;
 }
 
+.score-summary-block:not(:empty) {
+    width: 25%;
+    flex-shrink: 0;
+}
+
 .site-status-inline {
     font-size: var(--shards-font-size-xs, 0.75rem);
     color: var(--shards-text-secondary, #bbb);
     text-align: center;
-    width: 20%;
+    width: 15%;
     flex-shrink: 0;
-    margin: 0 2%;
 }
 
 .sites-table details > div {
@@ -445,4 +449,9 @@ button.observer-button.warning-button {
     background: #500;
     border-color: #800;
     color: #fff;
+}
+
+#dialog-site-observer button.observer-button.warning-button:hover:not(:disabled) {
+    background-color: #700;
+    border-color: #a00;
 }
