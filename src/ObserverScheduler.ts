@@ -12,7 +12,7 @@ export interface ObserverAlarm {
     type: ObserverCommand;
 }
 
-const MAX_TIMEOUT_MS = 2147483647;
+const MAX_TIMEOUT_MS = 48 * 60 * 60 * 1000;
 
 export class ObserverScheduler {
     private observerTimetable: Record<string, ObserverAlarm[]> = {};
