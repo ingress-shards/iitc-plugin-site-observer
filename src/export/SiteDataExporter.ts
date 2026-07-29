@@ -1,8 +1,6 @@
-import { zonedDateTimeISO } from "temporal-polyfill/fns/now";
-import { getFields } from "temporal-polyfill/fns/zoneddatetime";
+import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
 import { SiteRecordManager } from "../db/SiteRecordManager";
-
-const pad = (num: number): string => num.toString().padStart(2, "0");
+import { formatTimestamp } from "@ingress-shards/ingress-events-core";
 
 /**
  * Interface for data export strategies.
@@ -46,9 +44,7 @@ export class DataExporter {
      * Generate a timestamp string in the format YYYY.MM.DD.HH.mm.ss
      */
     private getTimestamp(): string {
-        const now = zonedDateTimeISO();
-        const fields = getFields(now);
-        return `${fields.year}.${pad(fields.month)}.${pad(fields.day)}.${pad(fields.hour)}.${pad(fields.minute)}.${pad(fields.second)}`;
+        return formatTimestamp(zonedDateTimeISO());
     }
 
     /**
