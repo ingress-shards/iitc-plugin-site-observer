@@ -22,14 +22,14 @@
         "autobuild": "webpack --watch --config webpack.dev.js",
         "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
         "lint": "eslint src",
-        "validate": "yarn clean && yarn lint && yarn build:prod",
+        "validate": "yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod",
         "validate:docker": "node scripts/validate.js"
     },
     "dependencies": {
-        "@ingress-shards/ingress-events-core": "0.5.1",
+        "@ingress-shards/ingress-events-core": "0.6.0",
         "idb": "^8.0.3",
         "iitcpluginkit": "^1.9.6",
-        "temporal-polyfill": "0.3.2"
+        "temporal-polyfill": "^1.0.2"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",

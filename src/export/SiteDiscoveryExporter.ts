@@ -1,7 +1,7 @@
-import { zonedDateTimeISO } from "temporal-polyfill/fns/now";
-import { epochSeconds } from "temporal-polyfill/fns/zoneddatetime";
+import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
+import { getEpochSeconds } from "@ingress-shards/ingress-events-core";
 import type { SiteDiscovery, PortalDiscovery, PreEventHistoryEntry } from "@ingress-shards/ingress-events-core";
-import { type ExportStrategy } from "./DataExporter";
+import { type ExportStrategy } from "./SiteDataExporter";
 
 /**
  * Strategy for exporting SiteDiscovery JSON (pre-event ornaments only).
@@ -9,18 +9,18 @@ import { type ExportStrategy } from "./DataExporter";
 export const SiteDiscoveryStrategy: ExportStrategy<SiteDiscovery> = {
     prefix: "ornamented-portals",
 
-    getData: async (siteId, siteDataManager) => {
+    getData: async (siteId, siteRecordManager) => {
         try {
-            const siteRecord = await siteDataManager.get(siteId);
+            const siteRecord = await siteRecordManager.get(siteId);
             if (!siteRecord?.observations) {
                 console.log(`[Site Observer: Site Discovery Strategy] No discovery data found for site ${siteId}`);
                 return;
             }
 
-            const portals: PortalDiscovery[] = Object.values(siteRecord.observations.portals)
-                .filter((p) => p.history.some((h) => h.type === "pre-event"))
+            const portals: PortalDiscovery[] = Object.values(siteRecord.observations.portals ?? {})
+                .filter((p) => p.history?.some((h) => h.type === "pre-event"))
                 .map((p) => {
-                    const preEventEntry = p.history.find((h): h is PreEventHistoryEntry => h.type === "pre-event")!;
+                    const preEventEntry = p.history!.find((h): h is PreEventHistoryEntry => h.type === "pre-event")!;
 
                     return {
                         title: p.title,
@@ -38,7 +38,7 @@ export const SiteDiscoveryStrategy: ExportStrategy<SiteDiscovery> = {
 
             const discovery: SiteDiscovery = {
                 siteId,
-                exportedAt: epochSeconds(zonedDateTimeISO()),
+                exportedAt: getEpochSeconds(zonedDateTimeISO()),
                 portals,
             };
 

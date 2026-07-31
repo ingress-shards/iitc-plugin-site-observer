@@ -1,36 +1,43 @@
-import * as ZonedDateTime from "temporal-polyfill/fns/zoneddatetime";
+import * as Now from "temporal-polyfill/fns/Now";
 import { IntelObserver } from "./IntelObserver";
 import { ShardJumpDataManager } from "../db/ShardJumpDataManager";
-import { ObserverEventInput, ObserverResult } from "../types/ObserverEvents";
+import { ObserverResult } from "../types/ObserverEvents";
 import { type ShardJumpCapture } from "@ingress-shards/ingress-events-core";
 
-export class ShardObserver implements IntelObserver<void> {
+export class ShardObserver implements IntelObserver {
     constructor(private dataManager: ShardJumpDataManager) {}
 
-    observe(input: ObserverEventInput<void>) {
-        console.log(`[Site Observer: Shard Jumps] Observing for site ${input.siteId}`);
+    observe(): void {
+        console.log(`[Site Observer: Shard Jumps] Attempting to retrieve shard jumps`);
         window.postAjax(
             "getShardJumps",
             {},
             async ({ result }: { result: string }) => {
-                const rawData = JSON.parse(result);
-                if (process.env.APP_ENV === "dev") {
-                    console.log("[Site Observer: Shard Jumps] Raw data", rawData);
-                    await this.dataManager.store(ZonedDateTime.epochMilliseconds(input.timestamp), rawData);
-                }
+                try {
+                    const rawData = JSON.parse(result);
+                    const timestamp = Now.instant().epochMilliseconds;
 
-                // Cast to ShardJumpCapture directly to avoid pulling in the heavy zod library.
-                // If you need to project or strip keys specifically for memory usage,
-                // you can add a manual mapping function here.
-                const shardJumps = rawData as ShardJumpCapture;
-                window.dispatchEvent(
-                    new CustomEvent<ObserverEventInput<ShardJumpCapture>>(ObserverResult.SHARD_JUMPS_OBSERVED, {
-                        detail: { ...input, data: shardJumps },
-                    }),
-                );
+                    const captureData: ShardJumpCapture = {
+                        ...rawData,
+                        timestamp,
+                    };
+
+                    if (process.env.APP_ENV === "dev") {
+                        console.log("[Site Observer: Shard Jumps] Raw data", captureData);
+                        await this.dataManager.store(timestamp, captureData);
+                    }
+
+                    window.dispatchEvent(
+                        new CustomEvent<ShardJumpCapture>(ObserverResult.SHARD_JUMPS_OBSERVED, {
+                            detail: captureData,
+                        }),
+                    );
+                } catch (error) {
+                    console.error("[Site Observer: Shard Jumps] Error parsing or storing shard jumps:", error);
+                }
             },
             (_status, _result, error) => {
-                console.log("[Site Observer: Shard Jumps] Scheduled download failed", error);
+                console.log("[Site Observer: Shard Jumps] Failure to retrieve shard jumps", error);
             },
         );
     }

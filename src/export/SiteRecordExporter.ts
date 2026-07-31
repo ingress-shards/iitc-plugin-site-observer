@@ -1,5 +1,5 @@
 import type { SiteRecord } from "@ingress-shards/ingress-events-core";
-import { type ExportStrategy } from "./DataExporter";
+import { type ExportStrategy } from "./SiteDataExporter";
 
 /**
  * Strategy for exporting the full SiteRecord JSON.
@@ -7,9 +7,9 @@ import { type ExportStrategy } from "./DataExporter";
 export const SiteRecordStrategy: ExportStrategy<SiteRecord> = {
     prefix: "site-record",
 
-    getData: async (siteId, siteDataManager) => {
+    getData: async (siteId, siteRecordManager) => {
         try {
-            const siteRecord = await siteDataManager.get(siteId);
+            const siteRecord = await siteRecordManager.get(siteId);
             if (!siteRecord) {
                 console.log(`[Site Observer: Site Record Strategy] No data found for site ${siteId}`);
                 return;

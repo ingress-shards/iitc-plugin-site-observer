@@ -4,13 +4,14 @@ import seasonManifest from "@ingress-shards/ingress-events-core/conf/recent/seas
 import seasonGeocode from "@ingress-shards/ingress-events-core/conf/recent/season_geocode.json";
 
 import {
-    buildSeasonConfig,
+    EventConfigRegistry,
     type EventBlueprints,
     type Ornament,
     type ShardJumpCapture,
-    type SeasonConfig,
     type SeasonGeocode,
     type SeasonManifest,
+    type MapSnapshot,
+    type SiteTargetPortals,
 } from "@ingress-shards/ingress-events-core";
 
 import { SiteRecordManager } from "./db/SiteRecordManager";
@@ -20,14 +21,17 @@ import { ShardObserver } from "./observers/ShardObserver";
 import { PreEventOrnamentObserver } from "./observers/PreEventOrnamentObserver";
 import { ObserverDialog } from "./ui/ObserverDialog";
 import { ShortcutControl } from "./ui/ShortcutControl";
-import { DataExporter } from "./export/DataExporter";
+import { DataExporter } from "./export/SiteDataExporter";
 import { SiteRecordStrategy } from "./export/SiteRecordExporter";
 import { SiteDiscoveryStrategy } from "./export/SiteDiscoveryExporter";
-import { ObserverCommand, ObserverEventInput, ObserverResult, UITrigger } from "./types/ObserverEvents";
-import { ShardProcessor } from "./processors/ShardProcessor";
+import { SiteTargetPortalStrategy } from "./export/SiteTargetPortalExporter";
+import { ObserverCommand, ObserverResult, UITrigger } from "./types/ObserverEvents";
+import { ShardJumpIngestionService } from "./services/ShardJumpIngestionService";
+import { PreEventOrnamentIngestionService } from "./services/PreEventOrnamentIngestionService";
+import { SiteTargetPortalIngestionService } from "./services/SiteTargetPortalIngestionService";
 
 class SiteObserver implements Plugin.Class {
-    private seasonConfigCache: Record<string, SeasonConfig>;
+    private eventConfigRegistry: EventConfigRegistry;
 
     private siteRecordManager: SiteRecordManager;
     private shardJumpDataManager: ShardJumpDataManager;
@@ -37,14 +41,16 @@ class SiteObserver implements Plugin.Class {
     private shardObserver: ShardObserver;
     private preEventOrnamentObserver: PreEventOrnamentObserver;
 
-    private shardProcessor: ShardProcessor;
+    private shardJumpIngestionService: ShardJumpIngestionService;
+    private preEventOrnamentIngestionService: PreEventOrnamentIngestionService;
+    private siteTargetPortalIngestionService: SiteTargetPortalIngestionService;
 
     private dataExporter: DataExporter;
 
     private dialog: ObserverDialog;
 
     constructor() {
-        this.seasonConfigCache = buildSeasonConfig({
+        this.eventConfigRegistry = new EventConfigRegistry({
             eventBlueprints: eventBlueprints as EventBlueprints,
             seasonManifest: seasonManifest as SeasonManifest,
             seasonGeocode: seasonGeocode as SeasonGeocode,
@@ -56,62 +62,88 @@ class SiteObserver implements Plugin.Class {
         this.shardObserver = new ShardObserver(this.shardJumpDataManager);
         this.preEventOrnamentObserver = new PreEventOrnamentObserver(
             eventBlueprints.ornaments as Record<string, Ornament>,
-            this.seasonConfigCache,
+        );
+
+        this.shardJumpIngestionService = new ShardJumpIngestionService(
+            this.eventConfigRegistry,
+            this.siteRecordManager,
+        );
+        this.preEventOrnamentIngestionService = new PreEventOrnamentIngestionService(
+            eventBlueprints.ornaments as Record<string, Ornament>,
+            this.eventConfigRegistry,
+            this.siteRecordManager,
+        );
+        this.siteTargetPortalIngestionService = new SiteTargetPortalIngestionService(
+            this.eventConfigRegistry,
             this.siteRecordManager,
         );
 
-        this.shardProcessor = new ShardProcessor();
-
-        this.observerScheduler = new ObserverScheduler(this.seasonConfigCache);
+        this.observerScheduler = new ObserverScheduler(this.eventConfigRegistry.seasons);
 
         this.dataExporter = new DataExporter(this.siteRecordManager);
 
-        this.dialog = new ObserverDialog(this.seasonConfigCache, this.siteRecordManager);
+        this.dialog = new ObserverDialog(this.eventConfigRegistry.seasons, this.siteRecordManager, this.observerScheduler);
     }
 
     init() {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("./ui/styles.css");
 
-        window.addEventListener(ObserverCommand.FETCH_SHARD_JUMPS, (event: Event) => {
-            const customEvent = event as CustomEvent<ObserverEventInput<void>>;
-            this.shardObserver.observe(customEvent.detail);
-        });
-
-        window.addEventListener(ObserverCommand.FETCH_PRE_EVENT_ORNAMENTS, (event: Event) => {
-            const customEvent = event as CustomEvent<ObserverEventInput<void>>;
-            this.preEventOrnamentObserver.observe(customEvent.detail).catch((error) => {
-                console.error(`[Site Observer: Main] Failed to fetch pre-event ornaments:`, error);
-            });
+        window.addEventListener(ObserverCommand.FETCH_SHARD_JUMPS, () => {
+            this.shardObserver.observe();
         });
 
         window.addEventListener(ObserverResult.SHARD_JUMPS_OBSERVED, (event: Event) => {
-            const customEvent = event as CustomEvent<ObserverEventInput<ShardJumpCapture>>;
-            this.shardProcessor.process(customEvent.detail);
-            window.dispatchEvent(new CustomEvent(UITrigger.SIGNAL_DATA_UPDATE));
+            const customEvent = event as CustomEvent<ShardJumpCapture>;
+            this.shardJumpIngestionService.ingest(customEvent.detail).catch((error) => {
+                console.error(`[Site Observer: Main] Failed to ingest shard jumps:`, error);
+            });
+        });
+
+        window.addEventListener(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, (event: Event) => {
+            const customEvent = event as CustomEvent<MapSnapshot>;
+            this.preEventOrnamentIngestionService.ingest(customEvent.detail).catch((error) => {
+                console.error(`[Site Observer: Main] Failed to ingest pre-event ornaments:`, error);
+            });
+        });
+
+        window.addEventListener(ObserverResult.SITE_TARGETS_OBSERVED, (event: Event) => {
+            const customEvent = event as CustomEvent<SiteTargetPortals>;
+            this.siteTargetPortalIngestionService.ingest(customEvent.detail).catch((error) => {
+                console.error(`[Site Observer: Main] Failed to ingest target portals:`, error);
+            });
         });
 
         window.addEventListener(ObserverCommand.EXPORT_SITE_DATA, (event: Event) => {
-            const customEvent = event as CustomEvent<ObserverEventInput<any>>;
+            const customEvent = event as CustomEvent<{ siteId: string }>;
             this.dataExporter.run(customEvent.detail.siteId, SiteRecordStrategy).catch((error) => {
                 console.error(`[Site Observer: Main] Failed to export site data:`, error);
             });
         });
 
         window.addEventListener(ObserverCommand.EXPORT_SITE_DISCOVERY, (event: Event) => {
-            const customEvent = event as CustomEvent<ObserverEventInput<any>>;
+            const customEvent = event as CustomEvent<{ siteId: string }>;
             this.dataExporter.run(customEvent.detail.siteId, SiteDiscoveryStrategy).catch((error) => {
                 console.error(`[Site Observer: Main] Failed to export site discovery:`, error);
             });
         });
 
+        window.addEventListener(ObserverCommand.EXPORT_SITE_TARGET_PORTALS, (event: Event) => {
+            const customEvent = event as CustomEvent<{ siteId: string }>;
+            this.dataExporter.run(customEvent.detail.siteId, SiteTargetPortalStrategy).catch((error) => {
+                console.error(`[Site Observer: Main] Failed to export site target portals:`, error);
+            });
+        });
+
         const timetable = this.observerScheduler.getTimetable();
-        console.log(`[Site Observer: Timetable]`);
         for (const [siteId, triggers] of Object.entries(timetable)) {
             console.log(`[Site Observer: Timetable] ${siteId}: ${triggers.length} triggers`);
         }
 
         this.addMapControl();
+
+        // Start passive ornament observation
+        this.preEventOrnamentObserver.observe();
     }
 
     /**

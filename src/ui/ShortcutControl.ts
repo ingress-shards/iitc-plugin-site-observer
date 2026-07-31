@@ -65,7 +65,14 @@ export class ShortcutControl {
         this.signalDot = button.querySelector(".site-observer-signal-dot")!;
 
         L.DomEvent.on(button, "click", L.DomEvent.stop).on(button, "click", () => {
-            this.dialog.show();
+            const jq = ((window as any).$ ?? (window as any).jQuery) as JQueryStatic;
+            const $existing = jq("#dialog-site-observer");
+            if ($existing && $existing.length > 0) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                ($existing as any).dialog("close");
+            } else {
+                this.dialog.show();
+            }
         });
 
         return container;

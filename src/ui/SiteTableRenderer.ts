@@ -1,28 +1,33 @@
-import { fromFields } from "temporal-polyfill/fns/duration";
-import { zonedDateTimeISO } from "temporal-polyfill/fns/now";
-import { timeZoneId as timeZoneIdZoned } from "temporal-polyfill/fns/zoneddatetime";
-import { fromString, until, toPlainDate, add as addZoned } from "temporal-polyfill/fns/zoneddatetime";
-import { toString as dateToString } from "temporal-polyfill/fns/plaindate";
+import { fromFields } from "temporal-polyfill/fns/Duration";
+import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
+import { diff as diffZonedDateTime, toPlainDate, add as addZoned } from "temporal-polyfill/fns/ZonedDateTime";
+import { toString as dateToString } from "temporal-polyfill/fns/PlainDate";
 import {
     SitePhase,
     SiteManager,
     TACTICAL_MARKER_SVG,
     UI_COLORS,
-    EXPORT_ICON_SVG,
-    getOrnamentSVG,
     calculateBoundingBoxDimensions,
+    FACTION_COLORS,
+    parseZonedDateTime,
 } from "@ingress-shards/ingress-events-core";
-import type { SeasonConfig, SiteConfig } from "@ingress-shards/ingress-events-core";
+import type { SeasonConfig, SiteConfig, SiteRecord, SiteManifestMetadata } from "@ingress-shards/ingress-events-core";
 import { SiteRecordManager } from "../db/SiteRecordManager";
+import { renderScoringTable } from "./ScoringTableRenderer";
+import type { DialogState } from "./ObserverDialog";
+import type { Temporal } from "temporal-polyfill";
 
 export class SiteTableRenderer {
-    constructor(private dataManager: SiteRecordManager) {}
+    constructor(
+        private dataManager: SiteRecordManager,
+        private seasonConfig: Record<string, SeasonConfig>
+    ) {}
 
     public static getSiteConfigsByDate(seasonConfig: Record<string, SeasonConfig>): Record<string, SiteConfig[]> {
         const siteConfigs: Record<string, SiteConfig[]> = {};
         for (const [, season] of Object.entries(seasonConfig)) {
             for (const [, siteConfig] of Object.entries(season.sites)) {
-                const startDate = fromString(siteConfig.geocode.startTime);
+                const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
                 const dateKey = dateToString(toPlainDate(startDate));
                 if (!siteConfigs[dateKey]) {
                     siteConfigs[dateKey] = [];
@@ -33,15 +38,36 @@ export class SiteTableRenderer {
         return siteConfigs;
     }
 
+    private getSiteManifestMetadata(siteConfig: SiteConfig): SiteManifestMetadata | undefined {
+        for (const season of Object.values(this.seasonConfig)) {
+            for (const component of season.metadata.components) {
+                if (component.eventType !== siteConfig.geocode.eventType) {
+                    continue;
+                }
+                if (component.schedule) {
+                    for (const day of component.schedule) {
+                        const match = day.sites.find(s => s.latE6 === siteConfig.geocode.latE6 && s.lngE6 === siteConfig.geocode.lngE6);
+                        if (match) {
+                            return match;
+                        }
+                    }
+                }
+            }
+        }
+        return undefined;
+    }
+
     public async generateSitesTableHtml(
-        selectedDate: string,
         siteConfigsByDate: Record<string, SiteConfig[]>,
-        selectedSiteId?: string,
+        dialogState: DialogState,
     ): Promise<string> {
+        const selectedDate = dialogState.selectedDate;
+        const selectedSiteId = dialogState.selectedSiteId;
+        const openSites = dialogState.openSites ?? {};
         const sites = selectedDate && siteConfigsByDate ? siteConfigsByDate[selectedDate] : [];
         if (!selectedDate || !sites || sites.length === 0) {
             return `
-                    <div class="ornament-status-placeholder">
+                    <div class="site-status-placeholder">
                         Select a date to observe sites for that day.
                     </div>
                 `;
@@ -50,59 +76,71 @@ export class SiteTableRenderer {
         const rows = await Promise.all(
             sites.map(async (site) => {
                 const isHighlighted = selectedSiteId === site.geocode.id;
-                const status = this.getSiteStatus(site);
+                let sitePhase: SitePhase;
+                let timeRemaining: Temporal.DurationLike | undefined;
 
-                let portalCount = 0;
-                let dimensionsHtml = "";
+                let playboxHtml = "";
 
+                let siteRecord: SiteRecord | undefined;
                 try {
-                    const siteRecord = await this.dataManager.get(site.geocode.id);
-                    const portals = siteRecord?.observations?.portals
-                        ? Object.values(siteRecord.observations.portals)
-                        : [];
-                    const preEventPortals = portals.filter((p) => p.history.some((h) => h.type === "pre-event"));
+                    siteRecord = await this.dataManager.get(site.geocode.id);
 
-                    portalCount = preEventPortals.length;
-                    if (portalCount > 1) {
+                    let actualShards = 0;
+                    if (siteRecord?.observations?.shards) {
+                        actualShards = Object.values(siteRecord.observations.shards).reduce((accumulator, shard) => 
+                            accumulator + (shard.history?.filter((h) => h.action === "spawn").length || 0), 0
+                        );
+                    }
+                    const portals = siteRecord?.observations?.portals ? Object.values(siteRecord.observations.portals) : [];
+                    const hasOrnaments = portals.some((p) => p.history?.some((h) => h.type === "pre-event"));
+
+                    ({ sitePhase, timeRemaining } = this.getSiteStatus(site, actualShards, hasOrnaments));
+
+                    const preEventPortals = portals.filter((p) => p.history?.some((h) => h.type === "pre-event"));
+
+                    if (preEventPortals.length > 1) {
                         const dimensions = calculateBoundingBoxDimensions(preEventPortals);
-                        dimensionsHtml = `<br/><span class="site-dimensions">Playbox: ${(dimensions.width / 1000).toFixed(1)}km x ${(dimensions.height / 1000).toFixed(1)}km</span>`;
+                        playboxHtml = `<div class="site-dimensions">Playbox: ${preEventPortals.length} portals, ${(dimensions.width / 1000).toFixed(1)}km x ${(dimensions.height / 1000).toFixed(1)}km</div>`;
                     }
                 } catch (error) {
                     console.error(
                         `[Site Observer: Table Renderer] Failed to retrieve site record for ${site.geocode.id}:`,
                         error,
                     );
+                    ({ sitePhase, timeRemaining } = this.getSiteStatus(site));
                 }
 
+                let scoreSummaryHtml = '';
+                if([SitePhase.Active, SitePhase.Processing, SitePhase.Complete].includes(sitePhase)) {
+                    if(siteRecord?.analysis?.seasonPoints?.RES && siteRecord?.analysis?.seasonPoints?.ENL) {
+                        scoreSummaryHtml = (
+                            `<span style="color: ${FACTION_COLORS.RES};">RES: ${siteRecord.analysis.seasonPoints.RES}</span>` +
+                            `&nbsp;` +
+                            `<span style="color: ${FACTION_COLORS.ENL};">ENL: ${siteRecord.analysis.seasonPoints.ENL}</span>`
+                        );
+                    }
+                }
+
+                const isOpen = openSites[site.geocode.id] ?? false;
                 return `
-            <tr class="shards-row-hover ${isHighlighted ? "shards-row-highlight" : ""}">
+            <tr class="${isHighlighted ? "highlighted" : ""}">
                 <td>
-                    <div class="site-cell">
-                        <div class="site-info">
-                            <span class="site-label">${site.geocode.label}</span><br />
-                            <span class="site-status">${status}</span>
+                    <details class="site-details" data-site-id="${site.geocode.id}" ${isOpen ? "open" : ""}>
+                        <summary>
+                            <div class="site-summary-left">
+                                <span class="site-label" title="${site.geocode.name}">${site.geocode.name}</span>
+                                <button class="go-to-site-btn" data-site-id="${site.geocode.id}" title="Go to Site">
+                                    ${TACTICAL_MARKER_SVG.replace('class="marker-svg-pin"', `class="marker-svg-pin marker-site-inline" style="--pin-color: ${UI_COLORS.SIGNAL}"`)}
+                                </button>
+                            </div>
+                            <span class="score-summary-block">${scoreSummaryHtml}</span>
+                            <span class="site-status-inline">${SiteManager.formatStatus({ phase: sitePhase, timeRemaining })}</span>
+                            </summary>
+                        <div>
+                            ${playboxHtml}
+                            ${renderScoringTable(site, siteRecord)}
                         </div>
-                        <button class="go-to-site-btn" data-site-id="${site.geocode.id}" title="Go to Site">
-                            ${TACTICAL_MARKER_SVG.replace('class="marker-svg-pin"', `class="marker-svg-pin marker-site-inline" style="--pin-color: ${UI_COLORS.SIGNAL}"`)}
-                        </button>
-                        <button class="export-site-btn" data-site-id="${site.geocode.id}" title="Export JSON">
-                            ${EXPORT_ICON_SVG}
-                        </button>
-                        ${
-                            portalCount > 0
-                                ? `
-                        <button class="export-discovery-btn" data-site-id="${site.geocode.id}" title="Export Discovery JSON">
-                            ${getOrnamentSVG(UI_COLORS.SIGNAL)}
-                        </button>`
-                                : ""
-                        }
-                    </div>
-                </td>
-                <td class="observations-cell">
-                    <div class="observation-count ${portalCount > 0 ? "has-observations" : ""}">
-                        Ornamented Portals: ${portalCount}
-                        ${dimensionsHtml}
-                    </div>
+                    </details>
                 </td>
             </tr>
             `;
@@ -111,12 +149,6 @@ export class SiteTableRenderer {
 
         return `
                 <table class="sites-table">
-                    <thead>
-                        <tr>
-                            <th>Site</th>
-                            <th>Observations</th>
-                        </tr>
-                    </thead>
                     <tbody>
                         ${rows.join("")}
                     </tbody>
@@ -124,33 +156,42 @@ export class SiteTableRenderer {
             `;
     }
 
-    private getSiteStatus(siteConfig: SiteConfig): string {
-        if (!siteConfig) return "Unknown";
+    private getSiteStatus(siteConfig: SiteConfig, actualShards: number = 0, hasOrnaments: boolean = false): { sitePhase: SitePhase; timeRemaining: Temporal.DurationLikeObject | undefined } {
+        if (!siteConfig) {
+            return { sitePhase: SitePhase.NoData, timeRemaining: undefined };
+        }
 
-        const startTimeZoned = fromString(siteConfig.geocode.startTime);
-        const durationMins = siteConfig.shardMechanics ? SiteManager.getEventDuration(siteConfig.shardMechanics) : 0;
+        const startTimeZoned = parseZonedDateTime(siteConfig.geocode.startTime);
+        const shardMechanics = siteConfig.mechanics.shards?.shardMechanics;
+        const durationMins = shardMechanics ? SiteManager.getEventDuration(shardMechanics) : 0;
         const endTimeZoned = addZoned(startTimeZoned, fromFields({ minutes: durationMins }));
-        const nowZoned = zonedDateTimeISO(timeZoneIdZoned(startTimeZoned));
+        const nowZoned = zonedDateTimeISO(startTimeZoned.timeZoneId);
 
-        const phase = SiteManager.calculatePhase({
+        const metadata = this.getSiteManifestMetadata(siteConfig);
+        const expectedShards = shardMechanics 
+            ? SiteManager.getExpectedShardCount(shardMechanics, metadata) 
+            : 0;
+
+        const sitePhase = SiteManager.calculatePhase({
             startTime: startTimeZoned,
             eventDurationMins: durationMins,
-            shards: { actual: 0, expected: 1 },
-            hasOrnaments: false,
+            shards: { actual: actualShards, expected: expectedShards },
+            hasOrnaments,
         });
-        let timeRemaining: any; // Duration Record
-        if (phase === SitePhase.Scheduled || phase === SitePhase.Discovery) {
-            timeRemaining = until(nowZoned, startTimeZoned, {
+
+        let timeRemaining: Temporal.DurationLikeObject | undefined = undefined;
+        if ([SitePhase.Scheduled, SitePhase.Discovery, SitePhase.StandBy].includes(sitePhase)) {
+            timeRemaining = diffZonedDateTime(nowZoned, startTimeZoned, {
                 smallestUnit: "minutes",
                 largestUnit: "days",
             });
-        } else if (phase === SitePhase.Active) {
-            timeRemaining = until(nowZoned, endTimeZoned, {
+        } else if (sitePhase === SitePhase.Active) {
+            timeRemaining = diffZonedDateTime(nowZoned, endTimeZoned, {
                 smallestUnit: "minutes",
                 largestUnit: "days",
             });
         }
 
-        return SiteManager.formatStatus({ phase, timeRemaining });
+        return { sitePhase, timeRemaining };
     }
 }

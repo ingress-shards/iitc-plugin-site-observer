@@ -1,7 +1,15 @@
 @import "@ingress-shards/ingress-events-core";
 
 #dialog-site-observer {
-    padding: 5px;
+    padding: 0px;
+    width: 500px !important;
+    max-width: 500px;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: 500px !important;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
 #dialog-site-observer section {
@@ -9,9 +17,18 @@
     flex-direction: column;
     height: 100%;
     min-width: 450px;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 #dialog-site-observer section main {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+#sites-table-container {
     flex-grow: 1;
     overflow-y: auto;
 }
@@ -24,8 +41,7 @@
 }
 
 #dialog-site-observer section main .site-controls {
-    margin-bottom: 15px;
-    padding-bottom: 15px;
+    padding: 5px;
     border-bottom: 1px solid var(--shards-border-color, #bbb);
     display: flex;
     justify-content: center;
@@ -39,7 +55,6 @@
     padding: 4px 10px;
     border: 1px solid var(--shards-border-color, #444);
     border-radius: 4px;
-    font-size: 1rem;
 }
 
 #dialog-site-observer section footer {
@@ -50,11 +65,11 @@
     align-items: flex-end;
     text-align: right;
     border-top: solid 1px var(--shards-border-color, #bbb);
-    margin-top: 5px;
 
     font-size: var(--shards-font-size-xs, 0.65rem);
-    font-family: monospace;
     color: var(--shards-text-secondary, #bbb);
+    margin: 0;
+    padding: 5px;
 }
 
 .sites-table {
@@ -64,7 +79,6 @@
 
 .sites-table th {
     text-align: center;
-    font-size: var(--shards-font-size-sm, 0.8rem);
     color: var(--shards-text-secondary, #bbb);
     font-weight: 600;
     letter-spacing: 0.01em;
@@ -72,24 +86,28 @@
     border-bottom: 2px solid var(--shards-border-color, #444);
 }
 
-.sites-table th:first-child {
-    text-align: left;
+.sites-table th:first-child,
+.sites-table > tbody > tr > td:first-child {
+    white-space: nowrap;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 .sites-table tr {
     vertical-align: middle;
 }
 
-.sites-table td {
-    padding: 4px 4px 4px 8px;
+.sites-table > tbody > tr > td {
+    padding: 4px;
     border-bottom: 1px solid var(--shards-border-color, #333);
     vertical-align: middle;
 }
 
 .sites-table .site-cell {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .sites-table .site-label {
@@ -102,45 +120,9 @@
     color: var(--shards-text-secondary, #bbb);
 }
 
-.sites-table button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.1rem;
-    padding: 4px 6px;
-    border-radius: 4px;
-    color: #eee;
-    transition: background-color 0.5s;
-    min-width: auto;
-}
 
-.sites-table button:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.sites-table button:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-/* Local Icon scaling */
-.shards-svg-export {
-    width: 20px;
-    height: 20px;
-}
-
-.marker-svg-pin.marker-site-inline {
-    width: 16px;
-    height: 26px;
-}
-
-.export-discovery-btn svg {
-    width: 20px;
-    height: 20px;
-}
-
-.ornament-status-placeholder {
-    padding: 40px 20px;
+.site-status-placeholder {
+    padding: 20px 10px;
     text-align: center;
     color: var(--shards-text-secondary, #bbb);
     font-style: italic;
@@ -214,6 +196,233 @@
     }
 }
 
+.observer-footer {
+    margin-top: 15px;
+    border-top: 1px solid var(--shards-border-color, #444);
+    padding-top: 5px;
+    display: flex;
+    justify-content: flex-start;
+    text-align: left;
+    flex-shrink: 0;
+}
+
+.actions-menu {
+    width: 100%;
+    border: 1px dashed #555;
+    border-radius: 4px;
+    background: #151515;
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.actions-menu summary {
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    padding: 5px 10px;
+}
+
+.actions-menu .site-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.actions-menu .site-actions:has(#selected-site-name:empty) {
+    display: none;
+}
+
+.selected-site {
+    color: var(--shards-signal-color, #f00);
+}
+
+.actions-menu .export-action-menu,
+.actions-menu .general-action-menu {
+    margin: 5px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Scoring Table Styles */
+.scoring-table {
+    border-collapse: collapse;
+    width: 100%;
+    text-align: center;
+    font-size: 0.9rem;
+    border: 1px solid var(--shards-border-color, #444);
+}
+
+.scoring-table th,
+.scoring-table td {
+    border: 1px solid var(--shards-border-color, #444);
+    padding: 5px;
+    vertical-align: middle;
+}
+
+.scoring-table thead th {
+    background: #222;
+    font-weight: bold;
+    color: #eee;
+}
+
+.scoring-table tbody tr.links-total-row {
+    border-top: 1px solid var(--shards-border-color, #555);
+    font-weight: bold;
+}
+
+.faction-enl-bg {
+    background: rgba(3, 220, 3, 0.12) !important;
+}
+
+.faction-res-bg {
+    background: rgba(0, 136, 255, 0.12) !important;
+}
+
+.font-bold {
+    font-weight: bold;
+}
+
+.observer-footer-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.next-alarm-label {
+    font-size: 0.75rem;
+    color: #aaa;
+    text-align: center;
+}
+
+.scoring-value-clickable {
+    text-decoration: underline dotted;
+    cursor: pointer;
+}
+
+.sites-table > tbody > tr > td {
+    width: 100%;
+    white-space: normal;
+    text-align: left;
+}
+
+.sites-table summary {
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Expand/Collapse Indicators */
+.sites-table summary::before {
+    content: "➕ ";
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.sites-table details[open] summary::before {
+    content: "➖ ";
+}
+
+.site-summary-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.sites-table summary .site-label {
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.score-summary-block:not(:empty) {
+    width: 25%;
+    flex-shrink: 0;
+}
+
+.site-status-inline {
+    font-size: var(--shards-font-size-xs, 0.75rem);
+    color: var(--shards-text-secondary, #bbb);
+    text-align: center;
+    width: 15%;
+    flex-shrink: 0;
+}
+
+.sites-table details > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 5px;
+}
+
+.observation-summary-block {
+    width: 35%;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: var(--shards-font-size-sm, 0.85rem);
+    margin: 0 2%;
+}
+
+.site-export-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.site-export-controls .ui-label {
+    margin-right: 4px;
+}
+
+/* Row Hover and Selection Highlight (targets only summary to prevent inner table bleed) */
+.sites-table tr:hover > td {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sites-table tr.highlighted > td {
+    background-color: rgba(255, 204, 0, 0.05) !important;
+    box-shadow: inset 2px 0 0 0 var(--shards-signal-color);
+    transition: background-color 0.2s ease;
+}
+
+/* Button Styles */
+#dialog-site-observer button:has(svg) {
+    background: none;
+    border: none;
+    border-radius: 4px;
+    color: #eee;
+    cursor: pointer;
+    min-width: auto;
+    padding: 4px 6px;
+    transition: background-color 0.5s;
+}
+
+#dialog-site-observer button:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#dialog-site-observer button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.marker-svg-pin.marker-site-inline {
+    width: 16px;
+    height: 26px;
+}
+
 button.observer-button {
     margin-left: auto;
     padding: 4px 10px;
@@ -223,4 +432,25 @@ button.observer-button {
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.8rem;
+}
+
+.actions-menu .site-actions button svg {
+    width: 20px;
+    height: 20px;
+}
+
+button.observer-button.export-button {
+    background: var(--shards-signal-color, #f00);
+    color: #000000;
+}
+
+button.observer-button.warning-button {
+    background: #500;
+    border-color: #800;
+    color: #fff;
+}
+
+#dialog-site-observer button.observer-button.warning-button:hover:not(:disabled) {
+    background-color: #700;
+    border-color: #a00;
 }

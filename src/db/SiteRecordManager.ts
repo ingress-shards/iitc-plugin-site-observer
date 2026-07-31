@@ -12,7 +12,7 @@ export class SiteRecordManager {
      */
     public async store(data: SiteRecord): Promise<void> {
         const database = await getDatabase();
-        await database.put(this.STORE_NAME, data, data.metadata.geocode.id);
+        await database.put(this.STORE_NAME, data, data.metadata.siteId);
     }
 
     /**
@@ -21,5 +21,21 @@ export class SiteRecordManager {
     public async get(siteId: string): Promise<SiteRecord | undefined> {
         const database = await getDatabase();
         return database.get(this.STORE_NAME, siteId);
+    }
+
+    /**
+     * Clear all site records from IndexedDB.
+     */
+    public async clearAll(): Promise<void> {
+        const database = await getDatabase();
+        await database.clear(this.STORE_NAME);
+    }
+
+    /**
+     * Delete data for a specific site.
+     */
+    public async delete(siteId: string): Promise<void> {
+        const database = await getDatabase();
+        await database.delete(this.STORE_NAME, siteId);
     }
 }

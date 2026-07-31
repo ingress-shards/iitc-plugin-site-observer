@@ -15,7 +15,7 @@ export default merge(baseProdConfig, {
     resolve: {
         symlinks: false,
         alias: {
-            'temporal-polyfill': path.resolve(__dirname, 'node_modules/temporal-polyfill')
+            'temporal-polyfill': path.resolve(__dirname, 'node_modules/temporal-polyfill'),
         }
     },
     mode: 'production',
