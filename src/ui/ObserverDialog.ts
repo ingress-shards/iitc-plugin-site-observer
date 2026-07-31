@@ -93,7 +93,7 @@ export class ObserverDialog {
                         </button>
                     </div>
                 </div>
-                <div class="load-action-menu">
+                <div class="general-action-menu">
                     <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download from Intel site">Download Shard Jumps</button>
                     <button id="load-local-ornaments-button" class="observer-button" title="Load Ornaments from Local JSON file">Load Ornaments</button>
                     <input type="file" id="local-ornaments-file-input" style="display: none;" accept=".json" />
@@ -101,8 +101,6 @@ export class ObserverDialog {
                     <input type="file" id="local-targets-file-input" style="display: none;" accept=".json" />
                     <button id="load-local-jumps-button" class="observer-button" title="Load Shard Jumps from Local JSON file">Load Shard Jumps</button>
                     <input type="file" id="local-jumps-file-input" style="display: none;" accept=".json" />
-                </div>
-                <div class="danger-zone-menu">
                     <button id="clear-all-data-button" class="observer-button warning-button" title="Clear all site data from database">Clear All Site Data</button>
                 </div>
             </details>

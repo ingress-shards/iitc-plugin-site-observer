@@ -240,8 +240,7 @@
 }
 
 .actions-menu .export-action-menu,
-.actions-menu .load-action-menu,
-.actions-menu .danger-zone-menu {
+.actions-menu .general-action-menu {
     margin: 5px;
     display: flex;
     gap: 10px;
