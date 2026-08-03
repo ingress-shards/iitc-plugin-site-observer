@@ -11,12 +11,11 @@
         "types": ["jquery", "build_constances", "greasemonkey", "iitc", "jqueryui", "leaflet", "images", "node"],
         "forceConsistentCasingInFileNames": true,
         "noImplicitReturns": true,
-        "noImplicitAny": true,
-        "noImplicitThis": true,
-        "alwaysStrict": true,
-        "strictNullChecks": true,
-        "strictFunctionTypes": true,
         "noUnusedLocals": true,
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
         "baseUrl": ".",
         "paths": {
             "@ingress-shards/ingress-events-core": [
