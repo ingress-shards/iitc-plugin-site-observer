@@ -10,29 +10,6 @@ export class ShortcutControl {
 
     constructor(private dialog: ObserverDialog) {}
 
-    /**
-     * Lazily creates the control and adds it to the map.
-     */
-    public addTo(map: L.Map) {
-        if (!this.controlInstance) {
-            this.initControl();
-        }
-        this.controlInstance!.addTo(map);
-    }
-
-    /**
-     * Signals that new data has been observed by pulsing the signal dot.
-     */
-    public signalDataUpdate() {
-        if (!this.signalDot) return;
-
-        this.signalDot.classList.add("has-data");
-
-        window.setTimeout(() => {
-            this.signalDot?.classList.remove("has-data");
-        }, 5000);
-    }
-
     private initControl() {
         // Extend L.Control only when L is guaranteed to exist.
         // We use an arrow function for onAdd to preserve 'this' as the ShortcutControl instance.
@@ -76,5 +53,28 @@ export class ShortcutControl {
         });
 
         return container;
+    }
+
+    /**
+     * Lazily creates the control and adds it to the map.
+     */
+    public addTo(map: L.Map) {
+        if (!this.controlInstance) {
+            this.initControl();
+        }
+        this.controlInstance!.addTo(map);
+    }
+
+    /**
+     * Signals that new data has been observed by pulsing the signal dot.
+     */
+    public signalDataUpdate() {
+        if (!this.signalDot) return;
+
+        this.signalDot.classList.add("has-data");
+
+        window.setTimeout(() => {
+            this.signalDot?.classList.remove("has-data");
+        }, 5000);
     }
 }

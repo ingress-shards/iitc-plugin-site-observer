@@ -16,7 +16,6 @@
         "noUncheckedIndexedAccess": true,
         "verbatimModuleSyntax": true,
         "isolatedModules": true,
-        "baseUrl": ".",
         "paths": {
             "@ingress-shards/ingress-events-core": [
                 "../ingress-events-core/dist/index.d.mts",

@@ -85,67 +85,6 @@ class SiteObserver implements Plugin.Class {
         this.dialog = new ObserverDialog(this.eventConfigRegistry.seasons, this.siteRecordManager, this.observerScheduler);
     }
 
-    init() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require("./ui/styles.css");
-
-        window.addEventListener(ObserverCommand.FETCH_SHARD_JUMPS, () => {
-            this.shardObserver.observe();
-        });
-
-        window.addEventListener(ObserverResult.SHARD_JUMPS_OBSERVED, (event: Event) => {
-            const customEvent = event as CustomEvent<ShardJumpCapture>;
-            this.shardJumpIngestionService.ingest(customEvent.detail).catch((error) => {
-                console.error(`[Site Observer: Main] Failed to ingest shard jumps:`, error);
-            });
-        });
-
-        window.addEventListener(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, (event: Event) => {
-            const customEvent = event as CustomEvent<MapSnapshot>;
-            this.preEventOrnamentIngestionService.ingest(customEvent.detail).catch((error) => {
-                console.error(`[Site Observer: Main] Failed to ingest pre-event ornaments:`, error);
-            });
-        });
-
-        window.addEventListener(ObserverResult.SITE_TARGETS_OBSERVED, (event: Event) => {
-            const customEvent = event as CustomEvent<SiteTargetPortals>;
-            this.siteTargetPortalIngestionService.ingest(customEvent.detail).catch((error) => {
-                console.error(`[Site Observer: Main] Failed to ingest target portals:`, error);
-            });
-        });
-
-        window.addEventListener(ObserverCommand.EXPORT_SITE_DATA, (event: Event) => {
-            const customEvent = event as CustomEvent<{ siteId: string }>;
-            this.dataExporter.run(customEvent.detail.siteId, SiteRecordStrategy).catch((error) => {
-                console.error(`[Site Observer: Main] Failed to export site data:`, error);
-            });
-        });
-
-        window.addEventListener(ObserverCommand.EXPORT_SITE_DISCOVERY, (event: Event) => {
-            const customEvent = event as CustomEvent<{ siteId: string }>;
-            this.dataExporter.run(customEvent.detail.siteId, SiteDiscoveryStrategy).catch((error) => {
-                console.error(`[Site Observer: Main] Failed to export site discovery:`, error);
-            });
-        });
-
-        window.addEventListener(ObserverCommand.EXPORT_SITE_TARGET_PORTALS, (event: Event) => {
-            const customEvent = event as CustomEvent<{ siteId: string }>;
-            this.dataExporter.run(customEvent.detail.siteId, SiteTargetPortalStrategy).catch((error) => {
-                console.error(`[Site Observer: Main] Failed to export site target portals:`, error);
-            });
-        });
-
-        const timetable = this.observerScheduler.getTimetable();
-        for (const [siteId, triggers] of Object.entries(timetable)) {
-            console.log(`[Site Observer: Timetable] ${siteId}: ${triggers.length} triggers`);
-        }
-
-        this.addMapControl();
-
-        // Start passive ornament observation
-        this.preEventOrnamentObserver.observe();
-    }
-
     /**
      * Adds a Leaflet control button to the map as a shortcut.
      */
@@ -159,6 +98,79 @@ class SiteObserver implements Plugin.Class {
                 control.signalDataUpdate();
             });
         }
+    }
+
+    init() {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("./ui/styles.css");
+
+        window.addEventListener(ObserverCommand.FETCH_SHARD_JUMPS, () => {
+            this.shardObserver.observe();
+        });
+
+        window.addEventListener(ObserverResult.SHARD_JUMPS_OBSERVED, async (event: Event) => {
+            const customEvent = event as CustomEvent<ShardJumpCapture>;
+            try {
+                await this.shardJumpIngestionService.ingest(customEvent.detail);
+            } catch (error) {
+                console.error(`[Site Observer: Main] Failed to ingest shard jumps:`, error);
+            }
+        });
+
+        window.addEventListener(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, async (event: Event) => {
+            const customEvent = event as CustomEvent<MapSnapshot>;
+            try {
+                await this.preEventOrnamentIngestionService.ingest(customEvent.detail);
+            } catch (error) {
+                console.error(`[Site Observer: Main] Failed to ingest pre-event ornaments:`, error);
+            }
+        });
+
+        window.addEventListener(ObserverResult.SITE_TARGETS_OBSERVED, async (event: Event) => {
+            const customEvent = event as CustomEvent<SiteTargetPortals>;
+            try {
+                await this.siteTargetPortalIngestionService.ingest(customEvent.detail);
+            } catch (error) {
+                console.error(`[Site Observer: Main] Failed to ingest target portals:`, error);
+            }
+        });
+
+        window.addEventListener(ObserverCommand.EXPORT_SITE_DATA, async (event: Event) => {
+            const customEvent = event as CustomEvent<{ siteId: string }>;
+            try {
+                await this.dataExporter.run(customEvent.detail.siteId, SiteRecordStrategy);
+            } catch (error) {
+                console.error(`[Site Observer: Main] Failed to export site data:`, error);
+            }
+        });
+
+        window.addEventListener(ObserverCommand.EXPORT_SITE_DISCOVERY, async (event: Event) => {
+            const customEvent = event as CustomEvent<{ siteId: string }>;
+            try {
+                await this.dataExporter.run(customEvent.detail.siteId, SiteDiscoveryStrategy);
+            } catch (error) {
+                console.error(`[Site Observer: Main] Failed to export site discovery:`, error);
+            }
+        });
+
+        window.addEventListener(ObserverCommand.EXPORT_SITE_TARGET_PORTALS, async (event: Event) => {
+            const customEvent = event as CustomEvent<{ siteId: string }>;
+            try {
+                await this.dataExporter.run(customEvent.detail.siteId, SiteTargetPortalStrategy);
+            } catch (error) {
+                console.error(`[Site Observer: Main] Failed to export site target portals:`, error);
+            }
+        });
+
+        const timetable = this.observerScheduler.getTimetable();
+        for (const [siteId, triggers] of Object.entries(timetable)) {
+            console.log(`[Site Observer: Timetable] ${siteId}: ${triggers.length} triggers`);
+        }
+
+        this.addMapControl();
+
+        // Start passive ornament observation
+        this.preEventOrnamentObserver.observe();
     }
 }
 

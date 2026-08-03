@@ -2,7 +2,7 @@ import * as ZonedDateTime from "temporal-polyfill/fns/ZonedDateTime";
 import * as Duration from "temporal-polyfill/fns/Duration";
 import * as Instant from "temporal-polyfill/fns/Instant";
 import * as Now from "temporal-polyfill/fns/Now";
-import { formatDuration, type SeasonConfig } from "@ingress-shards/ingress-events-core";
+import { formatDuration, type SeasonConfig, type EventTimeline } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand } from "./types/ObserverEvents";
 
 export interface ObserverAlarm {
@@ -24,45 +24,6 @@ export class ObserverScheduler {
         this.prepareRunQueue();
     }
 
-    private buildTimetable(): void {
-        for (const season of Object.values(this.seasonConfig)) {
-            for (const [siteId, { geocode, timeline }] of Object.entries(season.sites)) {
-                if (!timeline) continue;
-
-                const { timeZone } = geocode;
-
-                // 1. Fetch 5 minutes before the event starts
-                this.pushAlarmToTimetable({
-                    siteId,
-                    timestamp: timeline.start - 5 * 60 * 1000,
-                    timeZone,
-                    type: ObserverCommand.FETCH_SHARD_JUMPS,
-                });
-
-                // 2. Fetch for each wave action (spawns, jumps, despawns) plus a 1-minute delay
-                for (const wave of timeline.shards) {
-                    if (!wave.shardsActions) continue;
-                    for (const shardAction of wave.shardsActions) {
-                        this.pushAlarmToTimetable({
-                            siteId,
-                            timestamp: shardAction.time + 1 * 60 * 1000,
-                            timeZone,
-                            type: ObserverCommand.FETCH_SHARD_JUMPS,
-                        });
-                    }
-                }
-
-                // 3. Fetch at the end of the event (1 minute after timeline.end)
-                this.pushAlarmToTimetable({
-                    siteId,
-                    timestamp: timeline.end + 1 * 60 * 1000,
-                    timeZone,
-                    type: ObserverCommand.FETCH_SHARD_JUMPS,
-                });
-            }
-        }
-    }
-
     private pushAlarmToTimetable(trigger: ObserverAlarm) {
         const now = Now.instant().epochMilliseconds;
         const delay = trigger.timestamp - now;
@@ -80,14 +41,45 @@ export class ObserverScheduler {
         list.push(trigger);
     }
 
-    getTimetable(): Record<string, ObserverAlarm[]> {
-        return this.observerTimetable;
+    private buildTimetableForSite(siteId: string, timeZone: string, timeline: EventTimeline): void {
+        // 1. Fetch 5 minutes before the event starts
+        this.pushAlarmToTimetable({
+            siteId,
+            timestamp: timeline.start - 5 * 60 * 1000,
+            timeZone,
+            type: ObserverCommand.FETCH_SHARD_JUMPS,
+        });
+
+        // 2. Fetch for each wave action (spawns, jumps, despawns) plus a 1-minute delay
+        for (const wave of timeline.shards) {
+            if (!wave.shardsActions) continue;
+            for (const shardAction of wave.shardsActions) {
+                this.pushAlarmToTimetable({
+                    siteId,
+                    timestamp: shardAction.time + 1 * 60 * 1000,
+                    timeZone,
+                    type: ObserverCommand.FETCH_SHARD_JUMPS,
+                });
+            }
+        }
+
+        // 3. Fetch at the end of the event (1 minute after timeline.end)
+        this.pushAlarmToTimetable({
+            siteId,
+            timestamp: timeline.end + 1 * 60 * 1000,
+            timeZone,
+            type: ObserverCommand.FETCH_SHARD_JUMPS,
+        });
     }
 
-    private prepareRunQueue(): void {
-        this.runQueue = Object.values(this.observerTimetable).flat();
-        this.runQueue.sort((a, b) => a.timestamp - b.timestamp);
-        this.scheduleNextEvent();
+    private buildTimetable(): void {
+        for (const season of Object.values(this.seasonConfig)) {
+            for (const [siteId, { geocode, timeline }] of Object.entries(season.sites)) {
+                if (timeline) {
+                    this.buildTimetableForSite(siteId, geocode.timeZone, timeline);
+                }
+            }
+        }
     }
 
     private scheduleNextEvent(): void {
@@ -126,7 +118,17 @@ export class ObserverScheduler {
         window.dispatchEvent(event);
     }
 
-    public getNextAlarm(): ObserverAlarm | undefined {
+    private prepareRunQueue(): void {
+        this.runQueue = Object.values(this.observerTimetable).flat();
+        this.runQueue.sort((a, b) => a.timestamp - b.timestamp);
+        this.scheduleNextEvent();
+    }
+
+    getTimetable(): Record<string, ObserverAlarm[]> {
+        return this.observerTimetable;
+    }
+
+    getNextAlarm(): ObserverAlarm | undefined {
         return this.runQueue[0];
     }
 }

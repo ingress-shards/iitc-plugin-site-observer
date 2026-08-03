@@ -23,6 +23,23 @@ export interface ExportStrategy<T> {
 export class DataExporter {
     constructor(private siteRecordManager: SiteRecordManager) {}
 
+    private getTimestamp(): string {
+        return formatTimestamp(zonedDateTimeISO());
+    }
+
+    private triggerDownload<T>(filename: string, data: T): void {
+        const json = JSON.stringify(data);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     /**
      * Entry point for the export process.
      */
@@ -38,28 +55,5 @@ export class DataExporter {
         } catch (error) {
             console.error(`[Site Observer: Data Exporter] Failed to run export for site ${siteId}:`, error);
         }
-    }
-
-    /**
-     * Generate a timestamp string in the format YYYY.MM.DD.HH.mm.ss
-     */
-    private getTimestamp(): string {
-        return formatTimestamp(zonedDateTimeISO());
-    }
-
-    /**
-     * Trigger a browser download for the provided JSON data.
-     */
-    private triggerDownload<T>(filename: string, data: T): void {
-        const json = JSON.stringify(data);
-        const blob = new Blob([json], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     }
 }
