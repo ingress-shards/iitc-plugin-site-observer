@@ -5,7 +5,7 @@ import type {
     MapSnapshot,
 } from "@ingress-shards/ingress-events-core";
 
-import { IntelObserver } from "./IntelObserver";
+import type { IntelObserver } from "./IntelObserver";
 import { ObserverResult } from "../types/ObserverEvents";
 
 interface IITCMapData {
@@ -25,18 +25,6 @@ export class PreEventOrnamentObserver implements IntelObserver {
             .map(([id]) => id);
     }
 
-    /**
-     * Start the passive observation and run an initial viewport/cache scan.
-     */
-    observe(): void {
-        console.log(`[Site Observer: Pre-Event Ornaments] Activating passive observation...`);
-        this.setupPassiveHooks();
-        this.scanAndSyncAll();
-    }
-
-    /**
-     * Set up IITC hooks to catch map data updates.
-     */
     private setupPassiveHooks(): void {
         if (this.isHooked) return;
 
@@ -58,7 +46,7 @@ export class PreEventOrnamentObserver implements IntelObserver {
 
         console.log(`[Site Observer: Pre-Event Ornaments] Scanning viewport cache. Total portals: ${totalPortals}. Target pre-event ornament IDs: ${JSON.stringify(this.preEventOrnamentIds)}`);
 
-        for (const [, portal] of Object.entries(portals)) {
+        for (const portal of Object.values(portals)) {
             const portalData = portal.options?.data;
             if (!portalData?.ornaments || portalData.ornaments.length === 0) continue;
 
@@ -91,5 +79,14 @@ export class PreEventOrnamentObserver implements IntelObserver {
                 }),
             );
         }
+    }
+
+    /**
+     * Start the passive observation and run an initial viewport/cache scan.
+     */
+    observe(): void {
+        console.log(`[Site Observer: Pre-Event Ornaments] Activating passive observation...`);
+        this.setupPassiveHooks();
+        this.scanAndSyncAll();
     }
 }

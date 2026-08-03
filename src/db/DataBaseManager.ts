@@ -1,5 +1,6 @@
-import { openDB, IDBPDatabase } from "idb";
-import { MyDatabaseSchema } from "./Schema";
+import { openDB } from "idb";
+import type { IDBPDatabase } from "idb";
+import type { MyDatabaseSchema } from "./Schema";
 
 const DB_NAME = process.env.DATABASE_NAME;
 const DB_VERSION = 1;
@@ -10,10 +11,11 @@ export const ACTIVE_STORES = {
 } as const;
 
 let databaseInstance: Promise<IDBPDatabase<MyDatabaseSchema>> | undefined;
-export const getDatabase = () => {
+
+export const getDatabase = async () => {
     if (!databaseInstance) {
         console.log(`[Site Observer: DB] Opening database: ${DB_NAME} (v${DB_VERSION})`);
-        databaseInstance = openDB<MyDatabaseSchema>(DB_NAME, DB_VERSION, {
+        const openPromise = openDB<MyDatabaseSchema>(DB_NAME, DB_VERSION, {
             upgrade: (database) => {
                 console.log(`[Site Observer: DB] Upgrading database scheme...`);
                 if (!database.objectStoreNames.contains(ACTIVE_STORES.SITE_RECORD)) {
@@ -27,15 +29,18 @@ export const getDatabase = () => {
                     }
                 }
             },
-        })
-            .then((database) => {
+        });
+
+        databaseInstance = (async () => {
+            try {
+                const database = await openPromise;
                 console.log(`[Site Observer: DB] Database connected successfully`);
                 return database;
-            })
-            .catch((error) => {
+            } catch (error) {
                 console.error(`[Site Observer: DB] Failed to open database:`, error);
                 throw error;
-            });
+            }
+        })();
     }
     return databaseInstance;
 };

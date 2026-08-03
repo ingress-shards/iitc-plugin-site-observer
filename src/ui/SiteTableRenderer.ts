@@ -18,33 +18,28 @@ import type { DialogState } from "./ObserverDialog";
 import type { Temporal } from "temporal-polyfill";
 
 export class SiteTableRenderer {
-    constructor(
-        private dataManager: SiteRecordManager,
-        private seasonConfig: Record<string, SeasonConfig>
-    ) {}
-
     public static getSiteConfigsByDate(seasonConfig: Record<string, SeasonConfig>): Record<string, SiteConfig[]> {
         const siteConfigs: Record<string, SiteConfig[]> = {};
-        for (const [, season] of Object.entries(seasonConfig)) {
-            for (const [, siteConfig] of Object.entries(season.sites)) {
+        for (const season of Object.values(seasonConfig)) {
+            for (const siteConfig of Object.values(season.sites)) {
                 const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
                 const dateKey = dateToString(toPlainDate(startDate));
-                if (!siteConfigs[dateKey]) {
-                    siteConfigs[dateKey] = [];
-                }
-                siteConfigs[dateKey].push(siteConfig);
+                const list = (siteConfigs[dateKey] ??= []);
+                list.push(siteConfig);
             }
         }
         return siteConfigs;
     }
 
+    constructor(
+        private dataManager: SiteRecordManager,
+        private seasonConfig: Record<string, SeasonConfig>
+    ) {}
+
     private getSiteManifestMetadata(siteConfig: SiteConfig): SiteManifestMetadata | undefined {
         for (const season of Object.values(this.seasonConfig)) {
             for (const component of season.metadata.components) {
-                if (component.eventType !== siteConfig.geocode.eventType) {
-                    continue;
-                }
-                if (component.schedule) {
+                if (component.eventType === siteConfig.geocode.eventType && component.schedule) {
                     for (const day of component.schedule) {
                         const match = day.sites.find(s => s.latE6 === siteConfig.geocode.latE6 && s.lngE6 === siteConfig.geocode.lngE6);
                         if (match) {
@@ -55,6 +50,45 @@ export class SiteTableRenderer {
             }
         }
         return undefined;
+    }
+
+    private getSiteStatus(siteConfig: SiteConfig, actualShards: number = 0, hasOrnaments: boolean = false): { sitePhase: SitePhase; timeRemaining: Temporal.DurationLikeObject | undefined } {
+        if (!siteConfig) {
+            return { sitePhase: SitePhase.NoData, timeRemaining: undefined };
+        }
+
+        const startTimeZoned = parseZonedDateTime(siteConfig.geocode.startTime);
+        const shardMechanics = siteConfig.mechanics.shards?.shardMechanics;
+        const durationMins = shardMechanics ? SiteManager.getEventDuration(shardMechanics) : 0;
+        const endTimeZoned = addZoned(startTimeZoned, fromFields({ minutes: durationMins }));
+        const nowZoned = zonedDateTimeISO(startTimeZoned.timeZoneId);
+
+        const metadata = this.getSiteManifestMetadata(siteConfig);
+        const expectedShards = shardMechanics 
+            ? SiteManager.getExpectedShardCount(shardMechanics, metadata) 
+            : 0;
+
+        const sitePhase = SiteManager.calculatePhase({
+            startTime: startTimeZoned,
+            eventDurationMins: durationMins,
+            shards: { actual: actualShards, expected: expectedShards },
+            hasOrnaments,
+        });
+
+        let timeRemaining: Temporal.DurationLikeObject | undefined = undefined;
+        if ([SitePhase.Scheduled, SitePhase.Discovery, SitePhase.StandBy].includes(sitePhase)) {
+            timeRemaining = diffZonedDateTime(nowZoned, startTimeZoned, {
+                smallestUnit: "minutes",
+                largestUnit: "days",
+            });
+        } else if (sitePhase === SitePhase.Active) {
+            timeRemaining = diffZonedDateTime(nowZoned, endTimeZoned, {
+                smallestUnit: "minutes",
+                largestUnit: "days",
+            });
+        }
+
+        return { sitePhase, timeRemaining };
     }
 
     public async generateSitesTableHtml(
@@ -85,12 +119,11 @@ export class SiteTableRenderer {
                 try {
                     siteRecord = await this.dataManager.get(site.geocode.id);
 
-                    let actualShards = 0;
-                    if (siteRecord?.observations?.shards) {
-                        actualShards = Object.values(siteRecord.observations.shards).reduce((accumulator, shard) => 
+                    const actualShards = siteRecord?.observations?.shards
+                        ? Object.values(siteRecord.observations.shards).reduce((accumulator, shard) => 
                             accumulator + (shard.history?.filter((h) => h.action === "spawn").length || 0), 0
-                        );
-                    }
+                          )
+                        : 0;
                     const portals = siteRecord?.observations?.portals ? Object.values(siteRecord.observations.portals) : [];
                     const hasOrnaments = portals.some((p) => p.history?.some((h) => h.type === "pre-event"));
 
@@ -154,44 +187,5 @@ export class SiteTableRenderer {
                     </tbody>
                 </table>
             `;
-    }
-
-    private getSiteStatus(siteConfig: SiteConfig, actualShards: number = 0, hasOrnaments: boolean = false): { sitePhase: SitePhase; timeRemaining: Temporal.DurationLikeObject | undefined } {
-        if (!siteConfig) {
-            return { sitePhase: SitePhase.NoData, timeRemaining: undefined };
-        }
-
-        const startTimeZoned = parseZonedDateTime(siteConfig.geocode.startTime);
-        const shardMechanics = siteConfig.mechanics.shards?.shardMechanics;
-        const durationMins = shardMechanics ? SiteManager.getEventDuration(shardMechanics) : 0;
-        const endTimeZoned = addZoned(startTimeZoned, fromFields({ minutes: durationMins }));
-        const nowZoned = zonedDateTimeISO(startTimeZoned.timeZoneId);
-
-        const metadata = this.getSiteManifestMetadata(siteConfig);
-        const expectedShards = shardMechanics 
-            ? SiteManager.getExpectedShardCount(shardMechanics, metadata) 
-            : 0;
-
-        const sitePhase = SiteManager.calculatePhase({
-            startTime: startTimeZoned,
-            eventDurationMins: durationMins,
-            shards: { actual: actualShards, expected: expectedShards },
-            hasOrnaments,
-        });
-
-        let timeRemaining: Temporal.DurationLikeObject | undefined = undefined;
-        if ([SitePhase.Scheduled, SitePhase.Discovery, SitePhase.StandBy].includes(sitePhase)) {
-            timeRemaining = diffZonedDateTime(nowZoned, startTimeZoned, {
-                smallestUnit: "minutes",
-                largestUnit: "days",
-            });
-        } else if (sitePhase === SitePhase.Active) {
-            timeRemaining = diffZonedDateTime(nowZoned, endTimeZoned, {
-                smallestUnit: "minutes",
-                largestUnit: "days",
-            });
-        }
-
-        return { sitePhase, timeRemaining };
     }
 }

@@ -1,5 +1,5 @@
 import * as Now from "temporal-polyfill/fns/Now";
-import { IntelObserver } from "./IntelObserver";
+import type { IntelObserver } from "./IntelObserver";
 import { ShardJumpDataManager } from "../db/ShardJumpDataManager";
 import { ObserverResult } from "../types/ObserverEvents";
 import { type ShardJumpCapture } from "@ingress-shards/ingress-events-core";
