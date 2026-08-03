@@ -1,5 +1,6 @@
-import { openDB, IDBPDatabase } from "idb";
-import { MyDatabaseSchema } from "./Schema";
+import { openDB } from "idb";
+import type { IDBPDatabase } from "idb";
+import type { MyDatabaseSchema } from "./Schema";
 
 const DB_NAME = process.env.DATABASE_NAME;
 const DB_VERSION = 1;

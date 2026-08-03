@@ -217,6 +217,7 @@ export class ObserverDialog {
             const input = event.target as HTMLInputElement;
             if (!input.files || input.files.length === 0) return;
             const file = input.files[0];
+            if (!file) return;
 
             file.text()
                 .then((content) => {
@@ -253,6 +254,7 @@ export class ObserverDialog {
             const input = event.target as HTMLInputElement;
             if (!input.files || input.files.length === 0) return;
             const file = input.files[0];
+            if (!file) return;
 
             file.text()
                 .then((content) => {
@@ -279,6 +281,7 @@ export class ObserverDialog {
             const input = event.target as HTMLInputElement;
             if (!input.files || input.files.length === 0) return;
             const file = input.files[0];
+            if (!file) return;
 
             file.text()
                 .then((content) => {
@@ -412,11 +415,14 @@ export class ObserverDialog {
     private updateSelectedSiteText() {
         const {selectedSiteId, selectedDate} = this.dialogState;
         if (selectedSiteId && selectedDate) {
-            const site = this.siteConfigsByDate?.[selectedDate].find(
-                (site) => site.geocode.id === selectedSiteId,
-            );
-            if (site) {
-                this.$dialog?.find("#selected-site-name").text(`${site.geocode.name} (${selectedDate})`);
+            const configs = this.siteConfigsByDate?.[selectedDate];
+            if (configs) {
+                const site = configs.find(
+                    (site) => site.geocode.id === selectedSiteId,
+                );
+                if (site) {
+                    this.$dialog?.find("#selected-site-name").text(`${site.geocode.name} (${selectedDate})`);
+                }
             }
         }
     }

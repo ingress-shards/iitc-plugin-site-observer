@@ -6,7 +6,7 @@ import {
     type MapSnapshot,
     EventConfigRegistry
 } from "@ingress-shards/ingress-events-core";
-import { IntelIngestionService } from "./IntelIngestionService";
+import type { IntelIngestionService } from "./IntelIngestionService";
 import { SiteRecordManager } from "../db/SiteRecordManager";
 import { UITrigger } from "../types/ObserverEvents";
 

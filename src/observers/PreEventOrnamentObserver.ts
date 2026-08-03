@@ -5,7 +5,7 @@ import type {
     MapSnapshot,
 } from "@ingress-shards/ingress-events-core";
 
-import { IntelObserver } from "./IntelObserver";
+import type { IntelObserver } from "./IntelObserver";
 import { ObserverResult } from "../types/ObserverEvents";
 
 interface IITCMapData {

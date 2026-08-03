@@ -29,10 +29,8 @@ export class SiteTableRenderer {
             for (const [, siteConfig] of Object.entries(season.sites)) {
                 const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
                 const dateKey = dateToString(toPlainDate(startDate));
-                if (!siteConfigs[dateKey]) {
-                    siteConfigs[dateKey] = [];
-                }
-                siteConfigs[dateKey].push(siteConfig);
+                const list = (siteConfigs[dateKey] ??= []);
+                list.push(siteConfig);
             }
         }
         return siteConfigs;

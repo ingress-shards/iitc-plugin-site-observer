@@ -17,7 +17,7 @@ const MAX_TIMEOUT_MS = 48 * 60 * 60 * 1000;
 export class ObserverScheduler {
     private observerTimetable: Record<string, ObserverAlarm[]> = {};
     private runQueue: ObserverAlarm[] = [];
-    private activeTimer: NodeJS.Timeout;
+    private activeTimer?: NodeJS.Timeout;
 
     constructor(private seasonConfig: Record<string, SeasonConfig>) {
         this.buildTimetable();
@@ -71,11 +71,13 @@ export class ObserverScheduler {
             return;
         }
 
-        if (!this.observerTimetable[trigger.siteId]) {
-            this.observerTimetable[trigger.siteId] = [];
+        let list = this.observerTimetable[trigger.siteId];
+        if (!list) {
+            list = [];
+            this.observerTimetable[trigger.siteId] = list;
         }
 
-        this.observerTimetable[trigger.siteId].push(trigger);
+        list.push(trigger);
     }
 
     getTimetable(): Record<string, ObserverAlarm[]> {

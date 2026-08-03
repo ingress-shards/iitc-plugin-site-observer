@@ -1,4 +1,4 @@
-import { DBSchema } from "idb";
+import type { DBSchema } from "idb";
 import type { SiteRecord } from "@ingress-shards/ingress-events-core";
 import { ACTIVE_STORES } from "./DataBaseManager";
 
