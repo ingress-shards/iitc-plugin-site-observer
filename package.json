@@ -22,7 +22,8 @@
         "autobuild": "webpack --watch --config webpack.dev.js",
         "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
         "lint": "eslint src",
-        "validate": "yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod",
+        "sync:core": "node scripts/sync-local-core.js",
+        "validate": "yarn sync:core && yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod",
         "validate:docker": "node scripts/validate.js"
     },
     "dependencies": {
@@ -38,7 +39,7 @@
         "concurrently": "^10.0.4",
         "conventional-changelog-conventionalcommits": "^10.2.1",
         "eslint": "^10.8.0",
-        "eslint-plugin-prefer-arrow-functions": "^3.9.1",
+        "eslint-plugin-prefer-arrow-functions": "^3.10.1",
         "eslint-plugin-unicorn": "^72.0.0",
         "semantic-release": "^25.0.2",
         "source-map-loader": "^5.0.0",
