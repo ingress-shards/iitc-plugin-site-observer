@@ -3,6 +3,7 @@
         "module": "ES2022",
         "target": "ES2022",
         "lib": ["ES2022", "dom"],
+        "rootDir": "./src",
         "outDir": "dist/",
         "moduleResolution": "Bundler",
         "resolveJsonModule": true,

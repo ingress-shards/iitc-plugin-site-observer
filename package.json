@@ -1,52 +1,54 @@
 {
-    "name": "@ingress-shards/iitc-plugin-site-observer",
-    "version": "0.0.0-semantically-released",
-    "description": "Observes and records site data for Ingress Events.",
-    "author": "Lewis Keen",
-    "license": "MIT",
-    "homepage": "https://ingress-shards.github.io/iitc-plugin-site-observer/",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/ingress-shards/iitc-plugin-site-observer"
-    },
-    "bugs": {
-        "url": "https://github.com/ingress-shards/iitc-plugin-site-observer/issues"
-    },
-    "type": "module",
-    "private": true,
-    "scripts": {
-        "build": "yarn build:dev",
-        "build:dev": "webpack --config webpack.dev.js",
-        "build:prod": "webpack --config webpack.prod.js",
-        "start": "yarn ipk fileserver",
-        "autobuild": "webpack --watch --config webpack.dev.js",
-        "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
-        "lint": "eslint src",
-        "validate": "yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod",
-        "validate:docker": "node scripts/validate.js"
-    },
-    "dependencies": {
-        "@ingress-shards/ingress-events-core": "0.6.1",
-        "idb": "^8.0.3",
-        "iitcpluginkit": "^1.9.6",
-        "temporal-polyfill": "^1.0.2"
-    },
-    "devDependencies": {
-        "@eslint/js": "^10.0.1",
-        "@semantic-release/exec": "^7.1.0",
-        "@types/node": "^26.1.2",
-        "concurrently": "^10.0.4",
-        "conventional-changelog-conventionalcommits": "^10.2.1",
-        "eslint": "^10.8.0",
-        "eslint-plugin-prefer-arrow-functions": "^3.9.1",
-        "eslint-plugin-unicorn": "^72.0.0",
-        "semantic-release": "^25.0.2",
-        "source-map-loader": "^5.0.0",
-        "ts-node": "^10.9.2",
-        "typescript": "^5.9.3",
-        "typescript-eslint": "^8.65.0",
-        "webpack": "^5.104.1",
-        "webpack-bundle-analyzer": "^5.3.0"
-    },
-    "packageManager": "yarn@4.18.0"
+  "name": "@ingress-shards/iitc-plugin-site-observer",
+  "version": "0.0.0-semantically-released",
+  "description": "Observes and records site data for Ingress Events.",
+  "author": "Lewis Keen",
+  "license": "MIT",
+  "homepage": "https://ingress-shards.github.io/iitc-plugin-site-observer/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ingress-shards/iitc-plugin-site-observer"
+  },
+  "bugs": {
+    "url": "https://github.com/ingress-shards/iitc-plugin-site-observer/issues"
+  },
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "yarn build:dev",
+    "build:dev": "webpack --config webpack.dev.js",
+    "build:prod": "webpack --config webpack.prod.js",
+    "start": "yarn ipk fileserver",
+    "autobuild": "webpack --watch --config webpack.dev.js",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "eslint src",
+    "sync:core": "node scripts/sync-local-core.js",
+    "validate": "yarn sync:core && yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod",
+    "validate:docker": "node scripts/validate.js"
+  },
+  "dependencies": {
+    "@ingress-shards/ingress-events-core": "0.7.1",
+    "idb": "^8.0.3",
+    "iitcpluginkit": "^1.10.4",
+    "temporal-polyfill": "^1.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@semantic-release/exec": "^7.1.0",
+    "@types/node": "^26.2.0",
+    "concurrently": "^10.0.5",
+    "conventional-changelog-conventionalcommits": "^10.4.0",
+    "eslint": "^10.8.1",
+    "eslint-plugin-prefer-arrow-functions": "^3.10.2",
+    "eslint-plugin-unicorn": "^73.0.0",
+    "semantic-release": "^25.0.9",
+    "source-map-loader": "^5.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0",
+    "webpack": "^5.109.2",
+    "webpack-bundle-analyzer": "^5.3.1",
+    "webpack-cli": "^7.2.2"
+  },
+  "packageManager": "yarn@4.18.0"
 }
