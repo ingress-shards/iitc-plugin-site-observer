@@ -1,10 +1,10 @@
-import { ObserverDialog } from "./ObserverDialog";
+import type { ObserverDialog } from "../ObserverDialog";
 
 /**
  * Custom Leaflet control that provides a shortcut to the Site Observer dialog.
  * Uses lazy initialization to prevent "Class extends value undefined" errors on mobile.
  */
-export class ShortcutControl {
+export class ShortcutControlComponent {
     private controlInstance?: L.Control;
     private signalDot?: HTMLElement;
 
@@ -12,7 +12,7 @@ export class ShortcutControl {
 
     private initControl() {
         // Extend L.Control only when L is guaranteed to exist.
-        // We use an arrow function for onAdd to preserve 'this' as the ShortcutControl instance.
+        // We use an arrow function for onAdd to preserve 'this' as the ShortcutControlComponent instance.
         const ShortcutLeafletControl = L.Control.extend({
             options: {
                 position: "topleft",

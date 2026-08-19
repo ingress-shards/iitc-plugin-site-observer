@@ -7,11 +7,8 @@ import {
     EventConfigRegistry,
     type EventBlueprints,
     type Ornament,
-    type ShardJumpCapture,
     type SeasonGeocode,
     type SeasonManifest,
-    type MapSnapshot,
-    type SiteTargetPortals,
 } from "@ingress-shards/ingress-events-core";
 
 import { SiteRecordManager } from "./db/SiteRecordManager";
@@ -20,12 +17,10 @@ import { ObserverScheduler } from "./ObserverScheduler";
 import { ShardObserver } from "./observers/ShardObserver";
 import { PreEventOrnamentObserver } from "./observers/PreEventOrnamentObserver";
 import { ObserverDialog } from "./ui/ObserverDialog";
-import { ShortcutControl } from "./ui/ShortcutControl";
-import { DataExporter } from "./export/SiteDataExporter";
-import { SiteRecordStrategy } from "./export/SiteRecordExporter";
-import { SiteDiscoveryStrategy } from "./export/SiteDiscoveryExporter";
-import { SiteTargetPortalStrategy } from "./export/SiteTargetPortalExporter";
-import { ObserverCommand, ObserverResult, UITrigger } from "./types/ObserverEvents";
+import { TooltipComponent } from "./ui/components/TooltipComponent";
+import { ShortcutControlComponent } from "./ui/components/ShortcutControlComponent";
+import { EventCoordinator } from "./EventCoordinator";
+import { UITrigger } from "./types/ObserverEvents";
 import { ShardJumpIngestionService } from "./services/ShardJumpIngestionService";
 import { PreEventOrnamentIngestionService } from "./services/PreEventOrnamentIngestionService";
 import { SiteTargetPortalIngestionService } from "./services/SiteTargetPortalIngestionService";
@@ -45,9 +40,10 @@ class SiteObserver implements Plugin.Class {
     private preEventOrnamentIngestionService: PreEventOrnamentIngestionService;
     private siteTargetPortalIngestionService: SiteTargetPortalIngestionService;
 
-    private dataExporter: DataExporter;
-
+    private eventCoordinator: EventCoordinator;
     private dialog: ObserverDialog;
+    private tooltipComponent: TooltipComponent;
+    private shortcutControl: ShortcutControlComponent;
 
     constructor() {
         this.eventConfigRegistry = new EventConfigRegistry({
@@ -80,9 +76,16 @@ class SiteObserver implements Plugin.Class {
 
         this.observerScheduler = new ObserverScheduler(this.eventConfigRegistry.seasons);
 
-        this.dataExporter = new DataExporter(this.siteRecordManager);
+        this.eventCoordinator = new EventCoordinator(
+            this.shardObserver,
+            this.shardJumpIngestionService,
+            this.preEventOrnamentIngestionService,
+            this.siteTargetPortalIngestionService
+        );
 
         this.dialog = new ObserverDialog(this.eventConfigRegistry.seasons, this.siteRecordManager, this.observerScheduler);
+        this.tooltipComponent = new TooltipComponent();
+        this.shortcutControl = new ShortcutControlComponent(this.dialog);
     }
 
     /**
@@ -91,11 +94,10 @@ class SiteObserver implements Plugin.Class {
     private addMapControl() {
         const win = window as any;
         if (win.map) {
-            const control = new ShortcutControl(this.dialog);
-            control.addTo(win.map as L.Map);
+            this.shortcutControl.addTo(win.map as L.Map);
 
             window.addEventListener(UITrigger.SIGNAL_DATA_UPDATE, () => {
-                control.signalDataUpdate();
+                this.shortcutControl.signalDataUpdate();
             });
         }
     }
@@ -104,63 +106,7 @@ class SiteObserver implements Plugin.Class {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("./ui/styles.css");
 
-        window.addEventListener(ObserverCommand.FETCH_SHARD_JUMPS, () => {
-            this.shardObserver.observe();
-        });
-
-        window.addEventListener(ObserverResult.SHARD_JUMPS_OBSERVED, async (event: Event) => {
-            const customEvent = event as CustomEvent<ShardJumpCapture>;
-            try {
-                await this.shardJumpIngestionService.ingest(customEvent.detail);
-            } catch (error) {
-                console.error(`[Site Observer: Main] Failed to ingest shard jumps:`, error);
-            }
-        });
-
-        window.addEventListener(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, async (event: Event) => {
-            const customEvent = event as CustomEvent<MapSnapshot>;
-            try {
-                await this.preEventOrnamentIngestionService.ingest(customEvent.detail);
-            } catch (error) {
-                console.error(`[Site Observer: Main] Failed to ingest pre-event ornaments:`, error);
-            }
-        });
-
-        window.addEventListener(ObserverResult.SITE_TARGETS_OBSERVED, async (event: Event) => {
-            const customEvent = event as CustomEvent<SiteTargetPortals>;
-            try {
-                await this.siteTargetPortalIngestionService.ingest(customEvent.detail);
-            } catch (error) {
-                console.error(`[Site Observer: Main] Failed to ingest target portals:`, error);
-            }
-        });
-
-        window.addEventListener(ObserverCommand.EXPORT_SITE_DATA, async (event: Event) => {
-            const customEvent = event as CustomEvent<{ siteId: string }>;
-            try {
-                await this.dataExporter.run(customEvent.detail.siteId, SiteRecordStrategy);
-            } catch (error) {
-                console.error(`[Site Observer: Main] Failed to export site data:`, error);
-            }
-        });
-
-        window.addEventListener(ObserverCommand.EXPORT_SITE_DISCOVERY, async (event: Event) => {
-            const customEvent = event as CustomEvent<{ siteId: string }>;
-            try {
-                await this.dataExporter.run(customEvent.detail.siteId, SiteDiscoveryStrategy);
-            } catch (error) {
-                console.error(`[Site Observer: Main] Failed to export site discovery:`, error);
-            }
-        });
-
-        window.addEventListener(ObserverCommand.EXPORT_SITE_TARGET_PORTALS, async (event: Event) => {
-            const customEvent = event as CustomEvent<{ siteId: string }>;
-            try {
-                await this.dataExporter.run(customEvent.detail.siteId, SiteTargetPortalStrategy);
-            } catch (error) {
-                console.error(`[Site Observer: Main] Failed to export site target portals:`, error);
-            }
-        });
+        this.eventCoordinator.bindEvents();
 
         const timetable = this.observerScheduler.getTimetable();
         for (const [siteId, triggers] of Object.entries(timetable)) {
@@ -168,6 +114,11 @@ class SiteObserver implements Plugin.Class {
         }
 
         this.addMapControl();
+
+        this.tooltipComponent.bindEvents(
+            (id) => this.dialog.getSiteConfig(id),
+            (id) => this.dialog.getSiteRecord(id)
+        );
 
         // Start passive ornament observation
         this.preEventOrnamentObserver.observe();

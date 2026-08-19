@@ -10,6 +10,7 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    line-height: normal;
 }
 
 #dialog-site-observer section {
@@ -31,6 +32,8 @@
 #sites-table-container {
     flex-grow: 1;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
 }
 
 #dialog-site-observer section main .ui-label {
@@ -55,6 +58,17 @@
     padding: 4px 10px;
     border: 1px solid var(--shards-border-color, #444);
     border-radius: 4px;
+}
+
+#dialog-site-observer select optgroup {
+    color: var(--shards-signal-color, #FFCC00);
+    font-weight: bold;
+    font-style: normal;
+}
+
+#dialog-site-observer select option {
+    color: #eee;
+    font-weight: normal;
 }
 
 #dialog-site-observer section footer {
@@ -98,7 +112,10 @@
 }
 
 .sites-table > tbody > tr > td {
-    padding: 4px;
+    width: 100%;
+    white-space: normal;
+    text-align: left;
+    padding: 2px 2px 2px 6px;
     border-bottom: 1px solid var(--shards-border-color, #333);
     vertical-align: middle;
 }
@@ -111,7 +128,7 @@
 }
 
 .sites-table .site-label {
-    font-size: var(--shards-font-size-md, 1rem);
+    font-size: var(--shards-font-size-md, 0.9rem);
     font-weight: bold;
 }
 
@@ -245,6 +262,7 @@
     display: flex;
     gap: 10px;
     align-items: center;
+    justify-content: space-evenly;
 }
 
 /* Scoring Table Styles */
@@ -275,11 +293,11 @@
 }
 
 .faction-enl-bg {
-    background: rgba(3, 220, 3, 0.12) !important;
+    background: rgba(3, 220, 3, 0.24) !important;
 }
 
 .faction-res-bg {
-    background: rgba(0, 136, 255, 0.12) !important;
+    background: rgba(0, 136, 255, 0.24) !important;
 }
 
 .font-bold {
@@ -300,17 +318,55 @@
 }
 
 .scoring-value-clickable {
-    text-decoration: underline dotted;
-    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    cursor: help;
 }
 
-.sites-table > tbody > tr > td {
-    width: 100%;
-    white-space: normal;
-    text-align: left;
+.scoring-value-clickable::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    width: 4px;
+    height: 4px;
+    background-color: var(--shards-text-muted, #888);
+    border-radius: 50%;
+    opacity: 0.6;
+    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
 }
 
-.sites-table summary {
+/* Highlight the dot when cell or text is hovered */
+.scoring-table td:hover .scoring-value-clickable::after,
+.scoring-value-clickable:hover::after {
+    transform: scale(1.5);
+    opacity: 1;
+}
+
+.scoring-table td.faction-res-bg:hover .scoring-value-clickable::after {
+    background-color: var(--shards-res-color, #0088ff);
+}
+
+.scoring-table td.faction-enl-bg:hover .scoring-value-clickable::after {
+    background-color: var(--shards-enl-color, #03dc03);
+}
+
+.scoring-table td:not(.faction-res-bg):not(.faction-enl-bg):hover .scoring-value-clickable::after {
+    background-color: var(--shards-text-primary, #eee);
+}
+
+.scoring-table td.scoring-contributor-res {
+    font-weight: bold !important;
+    box-shadow: inset 0 0 0 1.5px var(--shards-res-color, #0088ff) !important;
+}
+
+.scoring-table td.scoring-contributor-enl {
+    font-weight: bold !important;
+    box-shadow: inset 0 0 0 1.5px var(--shards-enl-color, #03dc03) !important;
+}
+
+/* Site Row Header (replaces native summary) */
+.site-row-header {
     cursor: pointer;
     outline: none;
     user-select: none;
@@ -322,15 +378,18 @@
     box-sizing: border-box;
 }
 
-/* Expand/Collapse Indicators */
-.sites-table summary::before {
-    content: "➕ ";
-    font-size: 0.85rem;
+/* Expand/Collapse Arrow */
+.site-row-arrow {
+    font-size: 0.5rem;
+    display: inline-block;
     flex-shrink: 0;
+    transition: transform 0.3s ease;
+    transform-origin: center;
+    color: #bbb;
 }
 
-.sites-table details[open] summary::before {
-    content: "➖ ";
+.site-row.is-open .site-row-arrow {
+    transform: rotate(90deg);
 }
 
 .site-summary-left {
@@ -341,7 +400,7 @@
     min-width: 0;
 }
 
-.sites-table summary .site-label {
+.site-row-header .site-label {
     font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
@@ -351,6 +410,7 @@
 .score-summary-block:not(:empty) {
     width: 25%;
     flex-shrink: 0;
+    color: #bbb;
 }
 
 .site-status-inline {
@@ -361,7 +421,19 @@
     flex-shrink: 0;
 }
 
-.sites-table details > div {
+/* CSS Grid Expand/Collapse Animation */
+.site-row-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease-out;
+}
+
+.site-row.is-open .site-row-body {
+    grid-template-rows: 1fr;
+}
+
+.site-row-body-inner {
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -392,9 +464,8 @@
 }
 
 .sites-table tr.highlighted > td {
-    background-color: rgba(255, 204, 0, 0.05) !important;
-    box-shadow: inset 2px 0 0 0 var(--shards-signal-color);
-    transition: background-color 0.2s ease;
+    box-shadow: inset 3px 0 0 0 var(--shards-signal-color);
+    transition: background-color 0.3s ease;
 }
 
 /* Button Styles */
@@ -405,7 +476,7 @@
     color: #eee;
     cursor: pointer;
     min-width: auto;
-    padding: 4px 6px;
+    padding: 3px;
     transition: background-color 0.5s;
 }
 
@@ -419,12 +490,11 @@
 }
 
 .marker-svg-pin.marker-site-inline {
-    width: 16px;
-    height: 26px;
+    width: 14px;
+    height: 23px;
 }
 
 button.observer-button {
-    margin-left: auto;
     padding: 4px 10px;
     background: #333;
     color: #eee;
@@ -453,4 +523,115 @@ button.observer-button.warning-button {
 #dialog-site-observer button.observer-button.warning-button:hover:not(:disabled) {
     background-color: #700;
     border-color: #a00;
+}
+
+/* Scoring Tooltip Popover Styles */
+.scoring-tooltip-popover {
+    position: absolute;
+    z-index: 20000;
+    background: #141622;
+    border: 1px solid #30364d;
+    color: #c5c9db;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 6px; /* 6px all around */
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    box-sizing: border-box;
+    
+    /* Reveal/Dismiss 0.5s transition animation */
+    opacity: 0;
+    transform: scale(0.90);
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    visibility: hidden;
+}
+.scoring-tooltip-popover.visible {
+    opacity: 1;
+    transform: scale(1);
+    visibility: visible;
+}
+
+.scoring-tooltip-popover.bg-res { background: #0c203b !important; border-color: #0088ff !important; }
+.scoring-tooltip-popover.bg-enl { background: #0c2a20 !important; border-color: #03dc03 !important; }
+
+/* Custom popover widths by type */
+.scoring-tooltip-popover.width-wave { min-width: 150px; max-width: 190px; }
+.scoring-tooltip-popover.width-goals { min-width: 300px; }
+.scoring-tooltip-popover.width-links { min-width: 340px; }
+
+.scoring-tooltip-popover .popover-header {
+    text-align: center;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.scoring-tooltip-popover .popover-header strong {
+    color: #ffffff;
+    font-size: 12px;
+}
+.scoring-tooltip-popover .popover-header small {
+    color: #d1d4e0;
+    font-size: 10px;
+}
+.scoring-tooltip-popover .popover-header time {
+    font-size: 9px;
+    opacity: 0.6;
+    color: #a0a5c0;
+}
+
+.tooltip-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    color: #a0a5c0;
+}
+.tooltip-table th {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 8px;
+    color: #ffffff;
+    font-weight: bold;
+    text-align: center;
+}
+.tooltip-table td {
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #d1d4e0; /* lighter grey for better contrast */
+}
+.tooltip-table th small {
+    display: block;
+    font-size: 9px;
+    opacity: 0.6;
+    font-weight: normal;
+}
+/* Inline time label for wave actions rows */
+span.inline-time {
+    font-size: 9px;
+    opacity: 0.6;
+    color: #a0a5c0;
+    font-weight: normal;
+    margin-left: 4px;
+}
+/* Ellipsis text truncation for portal names (auto-widened) */
+.tooltip-table th.portal-col,
+.tooltip-table td.portal-name {
+    white-space: nowrap;
+    text-align: left !important;
+}
+.mismatch-row {
+    background: rgba(255, 193, 7, 0.12) !important;
+    color: #ffc107 !important;
+    font-weight: bold;
+}
+.mismatch-row td {
+    color: #ffc107 !important;
+}
+
+.res-text {
+    color: #0088ff !important;
+    font-weight: bold;
+}
+.enl-text {
+    color: #03dc03 !important;
+    font-weight: bold;
 }
