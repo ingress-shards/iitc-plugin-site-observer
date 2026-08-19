@@ -1,14 +1,12 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const path = require('path');
-const { fileURLToPath } = require('url');
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import webpack from 'webpack';
+import { merge } from 'webpack-merge';
+import baseProdConfig from 'iitcpluginkit/config/webpack.prod.js';
+import pluginJson from './plugin.json' with { type: 'json' };
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const webpack = require('webpack');
-const { merge } = require('webpack-merge');
-const pkg = require('./package.json');
-
-const baseProdConfig = require('iitcpluginkit/config/webpack.prod.js');
 
 export default merge(baseProdConfig, {
     context: path.resolve(__dirname),
@@ -17,6 +15,9 @@ export default merge(baseProdConfig, {
         alias: {
             'temporal-polyfill': path.resolve(__dirname, 'node_modules/temporal-polyfill'),
         }
+    },
+    resolveLoader: {
+        modules: ['node_modules', path.resolve(__dirname, 'node_modules/iitcpluginkit/node_modules')],
     },
     mode: 'production',
     devtool: false,
@@ -35,7 +36,7 @@ export default merge(baseProdConfig, {
         new webpack.DefinePlugin({
             'process.env.APP_ENV': JSON.stringify('prod'),
             'process.env.DATABASE_NAME': JSON.stringify('iitc_site-observer'),
-            'process.env.PLUGIN_ICON': JSON.stringify(require('./plugin.json').icon),
+            'process.env.PLUGIN_ICON': JSON.stringify(pluginJson.icon),
         })
     ],
 });
