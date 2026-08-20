@@ -225,7 +225,7 @@ __metadata:
   resolution: "@ingress-shards/iitc-plugin-site-observer@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@ingress-shards/ingress-events-core": "npm:0.7.1"
+    "@ingress-shards/ingress-events-core": "npm:0.7.2"
     "@semantic-release/exec": "npm:^7.1.0"
     "@types/node": "npm:^26.2.0"
     concurrently: "npm:^10.0.5"
@@ -247,12 +247,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ingress-shards/ingress-events-core@npm:0.7.1":
-  version: 0.7.1
-  resolution: "@ingress-shards/ingress-events-core@npm:0.7.1::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.1%2Fdc6947896696b7005e29e9d6a3416c715ce91a00"
+"@ingress-shards/ingress-events-core@npm:0.7.2":
+  version: 0.7.2
+  resolution: "@ingress-shards/ingress-events-core@npm:0.7.2::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.2%2Faa63db8b7e2d15d2c51c3202a541e3dc694c59b1"
   dependencies:
-    temporal-polyfill: "npm:^1.0.2"
-  checksum: 10c0/f816be1575aa57673767e47c402248ccef454942374034f5176e079b9aab0492cb55d33578a249f65f5d4288148c3220b58fbf7e364dd1a19d17a9526607e487
+    temporal-polyfill: "npm:^1.0.4"
+  checksum: 10c0/7b8a465e9d3bdd7f6a45b926873678ce7b5d9062c52d42552caf4625ca3284ac852e2a2b9ba1786e99d0a737da16bceab8d49bdef42ac794fb8866962ebe7cd3
   languageName: node
   linkType: hard
 
@@ -7268,16 +7268,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"temporal-polyfill@npm:^1.0.2":
-  version: 1.0.2
-  resolution: "temporal-polyfill@npm:1.0.2"
-  dependencies:
-    temporal-spec: "npm:1.0.1"
-    temporal-utils: "npm:1.0.1"
-  checksum: 10c0/5d1dab031414df3f66f6d07659e6741938f97e5881052b964c9ad2ca0a29d0536d1db88df016396fa739153dd5e306a97bebf04d91c0625747587114a7bfdeb6
-  languageName: node
-  linkType: hard
-
 "temporal-polyfill@npm:^1.0.4":
   version: 1.0.4
   resolution: "temporal-polyfill@npm:1.0.4"
@@ -7292,13 +7282,6 @@ __metadata:
   version: 1.0.1
   resolution: "temporal-spec@npm:1.0.1"
   checksum: 10c0/99f6bfe4a8e59cd0664d0e97706798a1e10d42b1b682da9b60778a4cb9a23362da01ea3d83a674ef426ed743bbab835e2e3d1acea5d2d4a9eabe33863237b014
-  languageName: node
-  linkType: hard
-
-"temporal-utils@npm:1.0.1":
-  version: 1.0.1
-  resolution: "temporal-utils@npm:1.0.1"
-  checksum: 10c0/cf229258c81f8283513ef7626f8089e23fb346d53b48d1c37581a11ca621ce4b65f3e0798565fa6f3c4fb48562202634adb343648350caad2e349eeae083d00b
   languageName: node
   linkType: hard
 
