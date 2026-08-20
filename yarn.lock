@@ -66,7 +66,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@conventional-changelog/template@npm:^1.4.0":
+"@conventional-changelog/template@npm:^1.2.1":
   version: 1.4.0
   resolution: "@conventional-changelog/template@npm:1.4.0"
   checksum: 10c0/052ac38b43f67b2572d101ced1dee2691a2ac3828cbc1041738cf1646b956ff0fb3e87258ec59f46eb2c3fcc9a68bb89f90b8dcb1e354880f2c71d8f5ef3a021
@@ -225,11 +225,11 @@ __metadata:
   resolution: "@ingress-shards/iitc-plugin-site-observer@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@ingress-shards/ingress-events-core": "npm:0.7.1"
+    "@ingress-shards/ingress-events-core": "npm:0.7.2"
     "@semantic-release/exec": "npm:^7.1.0"
     "@types/node": "npm:^26.2.0"
     concurrently: "npm:^10.0.5"
-    conventional-changelog-conventionalcommits: "npm:^10.4.0"
+    conventional-changelog-conventionalcommits: "npm:~10.2.1"
     eslint: "npm:^10.8.1"
     eslint-plugin-prefer-arrow-functions: "npm:^3.10.2"
     eslint-plugin-unicorn: "npm:^73.0.0"
@@ -237,7 +237,7 @@ __metadata:
     iitcpluginkit: "npm:^1.10.4"
     semantic-release: "npm:^25.0.9"
     source-map-loader: "npm:^5.0.0"
-    temporal-polyfill: "npm:^1.0.2"
+    temporal-polyfill: "npm:^1.0.4"
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.67.0"
@@ -247,12 +247,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ingress-shards/ingress-events-core@npm:0.7.1":
-  version: 0.7.1
-  resolution: "@ingress-shards/ingress-events-core@npm:0.7.1::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.1%2Fdc6947896696b7005e29e9d6a3416c715ce91a00"
+"@ingress-shards/ingress-events-core@npm:0.7.2":
+  version: 0.7.2
+  resolution: "@ingress-shards/ingress-events-core@npm:0.7.2::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.2%2Faa63db8b7e2d15d2c51c3202a541e3dc694c59b1"
   dependencies:
-    temporal-polyfill: "npm:^1.0.2"
-  checksum: 10c0/f816be1575aa57673767e47c402248ccef454942374034f5176e079b9aab0492cb55d33578a249f65f5d4288148c3220b58fbf7e364dd1a19d17a9526607e487
+    temporal-polyfill: "npm:^1.0.4"
+  checksum: 10c0/7b8a465e9d3bdd7f6a45b926873678ce7b5d9062c52d42552caf4625ca3284ac852e2a2b9ba1786e99d0a737da16bceab8d49bdef42ac794fb8866962ebe7cd3
   languageName: node
   linkType: hard
 
@@ -2238,12 +2238,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"conventional-changelog-conventionalcommits@npm:^10.4.0":
-  version: 10.4.0
-  resolution: "conventional-changelog-conventionalcommits@npm:10.4.0"
+"conventional-changelog-conventionalcommits@npm:~10.2.1":
+  version: 10.2.1
+  resolution: "conventional-changelog-conventionalcommits@npm:10.2.1"
   dependencies:
-    "@conventional-changelog/template": "npm:^1.4.0"
-  checksum: 10c0/60d99d74e6fdba134fc4785c13f87df82b9cabd980b4390dc958a8abf75d6fe1fdad921f52fb75e02f01a376cfd194b9f506f1e7718041e522b5260b53273882
+    "@conventional-changelog/template": "npm:^1.2.1"
+  checksum: 10c0/cb90f59908cba4d463258093b4a0e1d3ffe81234d032dbcbf857bfe6c8d959597b3a2c01fa69b45a4937f2059e43d9343d39636fc484ff89a624927c77cdf05d
   languageName: node
   linkType: hard
 
@@ -7268,13 +7268,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"temporal-polyfill@npm:^1.0.2":
-  version: 1.0.2
-  resolution: "temporal-polyfill@npm:1.0.2"
+"temporal-polyfill@npm:^1.0.4":
+  version: 1.0.4
+  resolution: "temporal-polyfill@npm:1.0.4"
   dependencies:
     temporal-spec: "npm:1.0.1"
-    temporal-utils: "npm:1.0.1"
-  checksum: 10c0/5d1dab031414df3f66f6d07659e6741938f97e5881052b964c9ad2ca0a29d0536d1db88df016396fa739153dd5e306a97bebf04d91c0625747587114a7bfdeb6
+    temporal-utils: "npm:1.0.2"
+  checksum: 10c0/b93905805462090e94069841bfa99d162aaec07766a2fa4a8aed28159e3c3296c03a3224b5c6ea14cc65890f299094b21d1702ee6d3cd15cdaae967c22809b33
   languageName: node
   linkType: hard
 
@@ -7285,10 +7285,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"temporal-utils@npm:1.0.1":
-  version: 1.0.1
-  resolution: "temporal-utils@npm:1.0.1"
-  checksum: 10c0/cf229258c81f8283513ef7626f8089e23fb346d53b48d1c37581a11ca621ce4b65f3e0798565fa6f3c4fb48562202634adb343648350caad2e349eeae083d00b
+"temporal-utils@npm:1.0.2":
+  version: 1.0.2
+  resolution: "temporal-utils@npm:1.0.2"
+  checksum: 10c0/062cacb33662e4e2547e1ebea98e994d3835d98bf528744256714cd0c4219d43ffd526a500bbce12392468f802a01de058885e8d73453c11ed7ca67fa6e327fb
   languageName: node
   linkType: hard
 
