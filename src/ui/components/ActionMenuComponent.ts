@@ -28,6 +28,56 @@ export class ActionMenuComponent {
         this.dataExporter = new DataExporter(this.dataManager);
     }
 
+    private ingestContent(rawFilename: string, content: string): void {
+        let filename = rawFilename;
+        if (filename.endsWith(".txt")) {
+            filename = filename.slice(0, -4);
+        }
+        if (!filename.endsWith(".json") && !filename.includes(".")) {
+            filename += ".json";
+        }
+
+        const data: unknown = JSON.parse(content);
+
+        if (filename.startsWith("ornamented-portals")) {
+            const parsedTimestamp = parseTimestampFromFilename(filename);
+            if (parsedTimestamp === undefined) {
+                throw new Error(`Could not parse timestamp from filename: ${filename}`);
+            }
+            const snapshot = convertSiteDiscoveryToMapSnapshot(data as SiteDiscovery, parsedTimestamp);
+            window.dispatchEvent(
+                new CustomEvent(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, {
+                    detail: snapshot,
+                }),
+            );
+            console.log(`[Site Observer] Ornaments loaded successfully from ${filename}.`);
+        } else if (filename.startsWith("target-portals")) {
+            window.dispatchEvent(
+                new CustomEvent(ObserverResult.SITE_TARGETS_OBSERVED, {
+                    detail: data,
+                }),
+            );
+            console.log(`[Site Observer] Target portals loaded successfully from ${filename}.`);
+        } else if (filename.startsWith("shard-jump-times")) {
+            const parsedTimestamp = parseTimestampFromFilename(filename);
+            if (parsedTimestamp === undefined) {
+                throw new Error(`Could not parse timestamp from filename: ${filename}`);
+            }
+            const captureData = {
+                ...(data as object),
+                timestamp: parsedTimestamp,
+            };
+            window.dispatchEvent(
+                new CustomEvent(ObserverResult.SHARD_JUMPS_OBSERVED, {
+                    detail: captureData,
+                }),
+            );
+            console.log(`[Site Observer] Shard jumps loaded successfully from ${filename}.`);
+        } else {
+            throw new Error(`Unrecognized filename prefix for import: ${filename}`);
+        }
+    }
+
     public render(): string {
         return `
             <details class="actions-menu">
@@ -52,8 +102,9 @@ export class ActionMenuComponent {
                 </div>
                 <div class="general-action-menu">
                     <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download from Intel site">Download Shard Jumps</button>
-                    <button id="import-data-button" class="observer-button" title="Load Ornaments, Targets, or Shard Jumps from Local JSON files">Import Data</button>
-                    <input type="file" id="import-data-file-input" style="display: none;" accept=".json" multiple />
+                    <button id="import-data-button" class="observer-button" title="Load Ornaments, Targets, or Shard Jumps from Local JSON or TXT files">Import from File</button>
+                    <input type="file" id="import-data-file-input" style="display: none;" accept=".json,.txt,application/json,text/plain" multiple />
+                    <button id="import-url-button" class="observer-button" title="Load Ornaments, Targets, or Shard Jumps from a URL">Import from URL</button>
                     <button id="clear-all-data-button" class="observer-button warning-button" title="Clear all site data from database">Clear All Site Data</button>
                 </div>
             </details>
@@ -100,50 +151,38 @@ export class ActionMenuComponent {
             for (const file of files) {
                 try {
                     const content = await file.text();
-                    const data = JSON.parse(content);
-                    const filename = file.name;
-
-                    if (filename.startsWith("ornamented-portals")) {
-                        const parsedTimestamp = parseTimestampFromFilename(filename);
-                        if (parsedTimestamp === undefined) {
-                            throw new Error(`Could not parse timestamp from filename: ${filename}`);
-                        }
-                        const snapshot = convertSiteDiscoveryToMapSnapshot(data as SiteDiscovery, parsedTimestamp);
-                        window.dispatchEvent(
-                            new CustomEvent(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, {
-                                detail: snapshot,
-                            }),
-                        );
-                        console.log(`[Site Observer] Local ornaments loaded successfully from ${filename}.`);
-                    } else if (filename.startsWith("target-portals")) {
-                        window.dispatchEvent(
-                            new CustomEvent(ObserverResult.SITE_TARGETS_OBSERVED, {
-                                detail: data,
-                            }),
-                        );
-                        console.log(`[Site Observer] Local target portals loaded successfully from ${filename}.`);
-                    } else if (filename.startsWith("shard-jump-times")) {
-                        const parsedTimestamp = parseTimestampFromFilename(filename);
-                        if (parsedTimestamp === undefined) {
-                            throw new Error(`Could not parse timestamp from filename: ${filename}`);
-                        }
-                        const captureData = {
-                            ...data,
-                            timestamp: parsedTimestamp,
-                        };
-                        window.dispatchEvent(
-                            new CustomEvent(ObserverResult.SHARD_JUMPS_OBSERVED, {
-                                detail: captureData,
-                            }),
-                        );
-                        console.log(`[Site Observer] Local shard jumps loaded successfully from ${filename}.`);
-                    } else {
-                        throw new Error(`Unrecognized filename prefix for import: ${filename}`);
-                    }
+                    this.ingestContent(file.name, content);
                 } catch (error: unknown) {
                     console.error(`[Site Observer] Failed to process ${file.name}:`, error);
                     alert(error instanceof Error ? error.message : `Failed to process ${file.name}. Check console for details.`);
                 }
+            }
+        });
+
+        $container.on("click", "#import-url-button", async () => {
+            const inputUrl = prompt("Enter JSON or Raw URL to import:");
+            if (!inputUrl || inputUrl.trim() === "") return;
+
+            const url = inputUrl.trim();
+            try {
+                const urlObject = new URL(url);
+                const pathSegments = urlObject.pathname.split("/").filter(Boolean);
+                const rawFilename = pathSegments.at(-1);
+
+                if (!rawFilename) {
+                    throw new Error("Could not determine filename from URL.");
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+                }
+
+                const content = await response.text();
+                this.ingestContent(rawFilename, content);
+            } catch (error: unknown) {
+                console.error("[Site Observer] Failed to import from URL:", error);
+                alert(error instanceof Error ? error.message : "Failed to import from URL. Check console for details.");
             }
         });
 
