@@ -15,7 +15,7 @@ import {
 import type { SeasonConfig, SiteConfig, SiteRecord, SiteManifestMetadata } from "@ingress-shards/ingress-events-core";
 import { SiteRecordManager } from "../../db/SiteRecordManager";
 import { ScoringTableComponent } from "./ScoringTableComponent";
-import type { DialogState } from "../ObserverDialog";
+import type { ViewState } from "../ObserverView.js";
 import type { Temporal } from "temporal-polyfill";
 import { UITrigger } from "../../types/ObserverEvents";
 
@@ -163,11 +163,11 @@ export class SiteTableComponent {
 
     public async render(
         siteConfigsByDate: Record<string, SiteConfig[]>,
-        dialogState: DialogState,
+        viewState: ViewState,
     ): Promise<string> {
-        const selectedDate = dialogState.selectedDate;
-        const selectedSiteId = dialogState.selectedSiteId;
-        const openSites = dialogState.openSites ?? {};
+        const selectedDate = viewState.selectedDate;
+        const selectedSiteId = viewState.selectedSiteId;
+        const openSites = viewState.openSites ?? {};
         const sites = selectedDate && siteConfigsByDate ? siteConfigsByDate[selectedDate] : [];
         if (!selectedDate || !sites || sites.length === 0) {
             return `
@@ -237,20 +237,23 @@ export class SiteTableComponent {
                 }
 
                 const isOpen = openSites[site.geocode.id] ?? false;
+                const phaseKey = SitePhase[sitePhase]?.toLowerCase() ?? "unknown";
                 return `
             <tr class="${isHighlighted ? "highlighted" : ""}">
                 <td>
                     <div class="site-row ${isOpen ? "is-open" : ""}" data-site-id="${site.geocode.id}" data-actual-shards="${actualShards}" data-has-ornaments="${hasOrnaments}">
-                        <div class="site-row-header">
-                            <span class="site-row-arrow">▶</span>
-                            <div class="site-summary-left">
-                                <span class="site-label" title="${site.geocode.name}">${site.geocode.name}</span>
+                        <div class="site-row-header responsive-header">
+                            <div class="site-header-primary">
+                                <span class="site-row-arrow">▶</span>
                                 <button class="go-to-site-btn" data-site-id="${site.geocode.id}" title="Go to Site">
                                     ${TACTICAL_MARKER_SVG.replace('class="marker-svg-pin"', `class="marker-svg-pin marker-site-inline" style="--pin-color: ${UI_COLORS.SIGNAL}"`)}
                                 </button>
+                                <span class="site-label" title="${site.geocode.name}">${site.geocode.name}</span>
                             </div>
-                            <span class="score-summary-block">${scoreSummaryHtml}</span>
-                            <span class="site-status-inline">${SiteManager.formatStatus({ phase: sitePhase, timeRemaining })}</span>
+                            <div class="site-header-secondary">
+                                <span class="score-summary-block">${scoreSummaryHtml}</span>
+                                <span class="site-status-badge phase-${phaseKey}">${SiteManager.formatStatus({ phase: sitePhase, timeRemaining })}</span>
+                            </div>
                         </div>
                         <div class="site-row-body">
                             <div class="site-row-body-inner">
@@ -275,7 +278,12 @@ export class SiteTableComponent {
     }
 
     public bindEvents($container: JQuery): void {
-        const win = window as any; // Re-use the existing map reference or pass it in
+        const win = window as unknown as {
+            map?: L.Map;
+            android?: { switchToPane?: (id: string) => void };
+            isSmartphone?: () => boolean;
+            show?: (paneId: string) => void;
+        };
 
         window.addEventListener(UITrigger.UPDATE_SITE_STATUS, () => {
             $container.find(".site-row").each((_, element) => {
@@ -291,7 +299,10 @@ export class SiteTableComponent {
                 
                 if (selectedSite) {
                     const { sitePhase, timeRemaining } = this.getSiteStatus(selectedSite, actualShards, hasOrnaments);
-                    $row.find(".site-status-inline").html(SiteManager.formatStatus({ phase: sitePhase, timeRemaining }));
+                    const statusText = SiteManager.formatStatus({ phase: sitePhase, timeRemaining });
+                    const phaseKey = SitePhase[sitePhase]?.toLowerCase() ?? "unknown";
+                    const $badge = $row.find(".site-status-badge");
+                    $badge.attr("class", `site-status-badge phase-${phaseKey}`).html(statusText);
                 }
             });
         });
@@ -313,6 +324,7 @@ export class SiteTableComponent {
         });
 
         $container.on("click", ".go-to-site-btn", async (event) => {
+            event.stopPropagation();
             const siteId = $(event.currentTarget).data("site-id") as string;
             if (siteId) {
                 this.onSiteSelected(siteId);
@@ -338,8 +350,20 @@ export class SiteTableComponent {
                 }
 
                 if (win.map) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
                     win.map.setView([latE6 / 1e6, lngE6 / 1e6], 15);
+                }
+
+                // On mobile, switch view back to the map to see the centered site
+                if (win.isSmartphone?.()) {
+                    const jq = ((window as any).$ ?? (window as any).jQuery) as JQueryStatic;
+                    jq("#site-observer").addClass("is-hidden").hide().remove();
+
+                    if (typeof win.show === "function") {
+                        win.show("map");
+                    }
+                    if (win.android && typeof win.android.switchToPane === "function") {
+                        win.android.switchToPane("map");
+                    }
                 }
             }
         });
