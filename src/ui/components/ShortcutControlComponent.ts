@@ -1,14 +1,14 @@
-import type { ObserverDialog } from "../ObserverDialog";
+import type { ObserverHost } from "../hosts/ObserverHost.js";
 
 /**
- * Custom Leaflet control that provides a shortcut to the Site Observer dialog.
+ * Custom Leaflet control that provides a shortcut button to toggle the Site Observer view.
  * Uses lazy initialization to prevent "Class extends value undefined" errors on mobile.
  */
 export class ShortcutControlComponent {
     private controlInstance?: L.Control;
     private signalDot?: HTMLElement;
 
-    constructor(private dialog: ObserverDialog) {}
+    constructor(private host: ObserverHost) {}
 
     private initControl() {
         // Extend L.Control only when L is guaranteed to exist.
@@ -41,15 +41,9 @@ export class ShortcutControlComponent {
 
         this.signalDot = button.querySelector(".site-observer-signal-dot")!;
 
-        L.DomEvent.on(button, "click", L.DomEvent.stop).on(button, "click", () => {
-            const jq = ((window as any).$ ?? (window as any).jQuery) as JQueryStatic;
-            const $existing = jq("#dialog-site-observer");
-            if ($existing && $existing.length > 0) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-                ($existing as any).dialog("close");
-            } else {
-                this.dialog.show();
-            }
+        L.DomEvent.on(button, "click", (event) => {
+            L.DomEvent.stop(event);
+            this.host.toggle();
         });
 
         return container;

@@ -13,24 +13,22 @@ import { SiteTableComponent, type DateOptionGroup } from "./components/SiteTable
 import { ActionMenuComponent } from "./components/ActionMenuComponent";
 import { ObserverScheduler } from "../ObserverScheduler";
 
-interface SiteObserverWindow extends Window {
-    dialog: (options: { title: string; html: string; id: string; width: number; resizable?: boolean }) => JQuery;
-    map: L.Map;
-}
-
-export interface DialogState {
+export interface ViewState {
     selectedDate?: string;
     selectedSiteId?: string;
     openSites: Record<string, boolean>;
-    position: { left: number; top: number };
 }
 
-export class ObserverDialog {
+/**
+ * Presentation-agnostic view component for the Site Observer.
+ * Handles markup generation, user interaction, state, and periodic countdowns.
+ */
+export class ObserverView {
     private siteConfigsByDate?: Record<string, SiteConfig[]>;
     private dateOptionGroups?: DateOptionGroup[];
-    private dialogState: DialogState;
+    private viewState: ViewState;
 
-    private $dialog?: JQuery;
+    private $root?: JQuery;
     private $tableContainer?: JQuery;
     private siteTableComponent: SiteTableComponent;
     private actionMenuComponent: ActionMenuComponent;
@@ -49,15 +47,14 @@ export class ObserverDialog {
             this.handleSiteSelected.bind(this),
             this.handleSiteToggled.bind(this)
         );
-        this.actionMenuComponent = new ActionMenuComponent(this.dataManager, () => this.dialogState.selectedSiteId);
-        this.dialogState = {
+        this.actionMenuComponent = new ActionMenuComponent(this.dataManager, () => this.viewState.selectedSiteId);
+        this.viewState = {
             openSites: {},
-            position: { left: 60, top: 40 }
         };
     }
 
     private updateSelectedSiteText() {
-        const {selectedSiteId, selectedDate} = this.dialogState;
+        const { selectedSiteId, selectedDate } = this.viewState;
         if (selectedSiteId && selectedDate) {
             const configs = this.siteConfigsByDate?.[selectedDate];
             if (configs) {
@@ -65,20 +62,20 @@ export class ObserverDialog {
                     (site) => site.geocode.id === selectedSiteId,
                 );
                 if (site) {
-                    this.$dialog?.find("#selected-site-name").text(`${site.geocode.name} (${selectedDate})`);
+                    this.$root?.find("#selected-site-name").text(`${site.geocode.name} (${selectedDate})`);
                 }
             }
         }
     }
 
     private handleSiteSelected(siteId: string) {
-        this.dialogState.selectedSiteId = siteId;
+        this.viewState.selectedSiteId = siteId;
         void this.updateSiteTable();
         this.updateSelectedSiteText();
     }
 
     private handleSiteToggled(siteId: string, isOpen: boolean) {
-        this.dialogState.openSites[siteId] = isOpen;
+        this.viewState.openSites[siteId] = isOpen;
     }
 
     private scheduleNextUpdate() {
@@ -97,7 +94,7 @@ export class ObserverDialog {
 
     private updateAlarmCountdown() {
         const nextAlarm = this.scheduler.getNextAlarm();
-        const $label = this.$dialog?.find(".next-alarm-label");
+        const $label = this.$root?.find(".next-alarm-label");
         if (!$label || $label.length === 0) return;
 
         if (nextAlarm) {
@@ -115,7 +112,7 @@ export class ObserverDialog {
         }
     }
 
-    public show() {
+    private buildHtml(): string {
         this.siteConfigsByDate ??= SiteTableComponent.getSiteConfigsByDate(this.seasonConfig);
         this.dateOptionGroups ??= SiteTableComponent.getDateOptionGroups(this.seasonConfig);
 
@@ -134,10 +131,9 @@ export class ObserverDialog {
         }
 
         const actionMenuHtml = this.actionMenuComponent.render();
-
         const shouldShowFooter = !!(nextAlarmHtml || actionMenuHtml);
 
-        const html = `
+        return `
             <section>
                 <main>
                     <div class="site-controls">
@@ -147,7 +143,7 @@ export class ObserverDialog {
                             ${this.dateOptionGroups.map((group) => `
                                 <optgroup label="${group.label}">
                                     ${group.dates.map((date) => `
-                                        <option value="${date.value}" ${date.value === this.dialogState.selectedDate ? "selected" : ""}>${date.label}</option>
+                                        <option value="${date.value}" ${date.value === this.viewState.selectedDate ? "selected" : ""}>${date.label}</option>
                                     `).join("")}
                                 </optgroup>
                             `).join("")}
@@ -162,55 +158,45 @@ export class ObserverDialog {
                         ${actionMenuHtml}
                     </div>
                 </footer>
-                ` : ''}
+                ` : ""}
             </section>
         `;
+    }
 
-        const win = window as unknown as SiteObserverWindow;
-        this.$dialog = win.dialog({
-            title: "Site Observer",
-            html: html,
-            id: "site-observer",
-            width: 500,
-            resizable: false,
-        });
-        this.$tableContainer = this.$dialog.find("#sites-table-container");
-
-        if (this.dialogState.position) {
-            this.$dialog.parent().offset(this.dialogState.position);
-        }
+    /**
+     * Mounts the view into a given container element.
+     */
+    public mount($container: JQuery): void {
+        this.$root = $container;
+        $container.html(this.buildHtml());
+        this.$tableContainer = $container.find("#sites-table-container");
 
         window.addEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
-        
-        this.$dialog.on("dialogclose", () => {
-            window.removeEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
-            if (this.activeTimer) {
-                clearTimeout(this.activeTimer);
-            }
-        });
 
-        this.$dialog.on("dialogdragstop", () => {
-            const offset = this.$dialog?.parent().offset();
-            if (offset) {
-                this.dialogState.position = {
-                    left: offset.left,
-                    top: offset.top,
-                };
-            }
-        });
-
-        this.$dialog.on("change", "#date-select", (event) => {
-            this.dialogState.selectedDate = $(event.target).val() as string;
+        $container.off("change", "#date-select").on("change", "#date-select", (event) => {
+            this.viewState.selectedDate = (event.target as HTMLSelectElement).value;
             void this.updateSiteTable();
         });
 
-        // Delegate component event bindings
-        this.actionMenuComponent.bindEvents(this.$dialog);
-        this.siteTableComponent.bindEvents(this.$dialog);
+        this.actionMenuComponent.bindEvents($container);
+        this.siteTableComponent.bindEvents($container);
 
         void this.updateSiteTable();
         this.updateSelectedSiteText();
         this.scheduleNextUpdate();
+    }
+
+    /**
+     * Unmounts the view and cleans up active timers and event listeners.
+     */
+    public unmount(): void {
+        window.removeEventListener(UITrigger.SIGNAL_DATA_UPDATE, this.dataUpdateListener);
+        if (this.activeTimer) {
+            clearTimeout(this.activeTimer);
+            this.activeTimer = undefined;
+        }
+        this.$root = undefined;
+        this.$tableContainer = undefined;
     }
 
     public getSiteConfig(siteId: string): SiteConfig | undefined {
@@ -226,17 +212,17 @@ export class ObserverDialog {
         return this.dataManager.get(siteId);
     }
 
-    public async updateSiteTable() {
-        if (!this.$tableContainer || !this.siteConfigsByDate || !this.dialogState) return;
+    public async updateSiteTable(): Promise<void> {
+        if (!this.$tableContainer || !this.siteConfigsByDate || !this.viewState) return;
 
         try {
             const tableHtml = await this.siteTableComponent.render(
                 this.siteConfigsByDate,
-                this.dialogState,
+                this.viewState,
             );
             this.$tableContainer.html(tableHtml);
         } catch (error) {
-            console.error(`[Site Observer: Dialog] Failed to update site table:`, error);
+            console.error(`[Site Observer: View] Failed to update site table:`, error);
         }
     }
 }

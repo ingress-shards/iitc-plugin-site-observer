@@ -16,7 +16,10 @@ import { ShardJumpDataManager } from "./db/ShardJumpDataManager";
 import { ObserverScheduler } from "./ObserverScheduler";
 import { ShardObserver } from "./observers/ShardObserver";
 import { PreEventOrnamentObserver } from "./observers/PreEventOrnamentObserver";
-import { ObserverDialog } from "./ui/ObserverDialog";
+import { ObserverView } from "./ui/ObserverView";
+import type { ObserverHost } from "./ui/hosts/ObserverHost";
+import { DialogHost } from "./ui/hosts/DialogHost";
+import { PaneHost } from "./ui/hosts/PaneHost";
 import { TooltipComponent } from "./ui/components/TooltipComponent";
 import { ShortcutControlComponent } from "./ui/components/ShortcutControlComponent";
 import { EventCoordinator } from "./EventCoordinator";
@@ -24,6 +27,18 @@ import { UITrigger } from "./types/ObserverEvents";
 import { ShardJumpIngestionService } from "./services/ShardJumpIngestionService";
 import { PreEventOrnamentIngestionService } from "./services/PreEventOrnamentIngestionService";
 import { SiteTargetPortalIngestionService } from "./services/SiteTargetPortalIngestionService";
+
+interface AndroidBridge {
+    addPane: (id: string, label: string, icon?: string) => void;
+}
+
+interface IITCWindow {
+    isSmartphone?: () => boolean;
+    useAndroidPanes?: () => boolean;
+    map?: L.Map;
+    android?: AndroidBridge;
+    addHook?: (name: string, callback: (...args: unknown[]) => void) => void;
+}
 
 class SiteObserver implements Plugin.Class {
     private eventConfigRegistry: EventConfigRegistry;
@@ -41,9 +56,10 @@ class SiteObserver implements Plugin.Class {
     private siteTargetPortalIngestionService: SiteTargetPortalIngestionService;
 
     private eventCoordinator: EventCoordinator;
-    private dialog: ObserverDialog;
+    private view: ObserverView;
+    private host?: ObserverHost;
     private tooltipComponent: TooltipComponent;
-    private shortcutControl: ShortcutControlComponent;
+    private shortcutControl?: ShortcutControlComponent;
 
     constructor() {
         this.eventConfigRegistry = new EventConfigRegistry({
@@ -83,21 +99,45 @@ class SiteObserver implements Plugin.Class {
             this.siteTargetPortalIngestionService
         );
 
-        this.dialog = new ObserverDialog(this.eventConfigRegistry.seasons, this.siteRecordManager, this.observerScheduler);
+        this.view = new ObserverView(this.eventConfigRegistry.seasons, this.siteRecordManager, this.observerScheduler);
         this.tooltipComponent = new TooltipComponent();
-        this.shortcutControl = new ShortcutControlComponent(this.dialog);
+    }
+
+    private isSmartphone(): boolean {
+        const win = window as unknown as IITCWindow;
+        return win.isSmartphone?.() ?? win.useAndroidPanes?.() ?? false;
     }
 
     /**
-     * Adds a Leaflet control button to the map as a shortcut.
+     * Adds a Leaflet control button to the map as a shortcut on desktop.
      */
     private addMapControl() {
-        const win = window as any;
-        if (win.map) {
-            this.shortcutControl.addTo(win.map as L.Map);
+        const win = window as unknown as IITCWindow;
+        if (win.map && this.shortcutControl) {
+            this.shortcutControl.addTo(win.map);
 
             window.addEventListener(UITrigger.SIGNAL_DATA_UPDATE, () => {
-                this.shortcutControl.signalDataUpdate();
+                this.shortcutControl?.signalDataUpdate();
+            });
+        }
+    }
+
+    /**
+     * Sets up mobile pane integration on smartphones.
+     */
+    private addMobilePane() {
+        const win = window as unknown as IITCWindow;
+        if (win.android && typeof win.android.addPane === "function") {
+            win.android.addPane("site-observer", "Site Observer", "ic_action_location_found");
+        }
+
+        if (typeof win.addHook === "function") {
+            win.addHook("paneChanged", (pane: unknown) => {
+                if (pane === "site-observer") {
+                    this.host?.show();
+                } else {
+                    this.host?.hide();
+                }
             });
         }
     }
@@ -106,6 +146,12 @@ class SiteObserver implements Plugin.Class {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("./ui/styles.css");
 
+        this.host = this.isSmartphone()
+            ? new PaneHost(this.view)
+            : new DialogHost(this.view);
+
+        this.shortcutControl = new ShortcutControlComponent(this.host);
+
         this.eventCoordinator.bindEvents();
 
         const timetable = this.observerScheduler.getTimetable();
@@ -113,11 +159,15 @@ class SiteObserver implements Plugin.Class {
             console.log(`[Site Observer: Timetable] ${siteId}: ${triggers.length} triggers`);
         }
 
-        this.addMapControl();
+        if (this.isSmartphone()) {
+            this.addMobilePane();
+        } else {
+            this.addMapControl();
+        }
 
         this.tooltipComponent.bindEvents(
-            (id) => this.dialog.getSiteConfig(id),
-            (id) => this.dialog.getSiteRecord(id)
+            (id) => this.view.getSiteConfig(id),
+            (id) => this.view.getSiteRecord(id)
         );
 
         // Start passive ornament observation
