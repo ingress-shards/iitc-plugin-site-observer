@@ -23,7 +23,6 @@ export class ShardObserver implements IntelObserver {
                     };
 
                     if (process.env.APP_ENV === "dev") {
-                        console.log("[Site Observer: Shard Jumps] Raw data", captureData);
                         await this.dataManager.store(timestamp, captureData);
                     }
 

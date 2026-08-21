@@ -13,19 +13,34 @@ const formatTickTime = (timestamp: number, siteConfig: SiteConfig): string => {
     }
 };
 
-export class TooltipComponent {
-    private $jqCard: JQuery;
+interface IITCWindow {
+    $: JQueryStatic;
+    jQuery: JQueryStatic;
+}
 
-    constructor() {
-        this.$jqCard = $('<div class="scoring-tooltip-popover"></div>').appendTo("body");
+const getJQuery = (): JQueryStatic => {
+    const win = window as unknown as IITCWindow;
+    return win.$ ?? win.jQuery;
+};
+
+export class TooltipComponent {
+    private $jqCard?: JQuery;
+
+    private getCard(): JQuery {
+        if (!this.$jqCard) {
+            const jq = getJQuery();
+            this.$jqCard = jq('<div class="scoring-tooltip-popover"></div>').appendTo("body");
+        }
+        return this.$jqCard;
     }
 
     public bindEvents(
         getSiteConfig: (siteId: string) => SiteConfig | undefined,
         getSiteRecord: (siteId: string) => Promise<SiteRecord | undefined>
     ): void {
+        const jq = getJQuery();
         const showTooltip = async (target: HTMLElement, eventJQuery: JQuery.TriggeredEvent) => {
-            const $target = $(target);
+            const $target = jq(target);
             const siteId = $target.attr("data-site-id");
             const waveNum = Number($target.attr("data-wave"));
 
@@ -47,21 +62,30 @@ export class TooltipComponent {
                 this.showLinkTooltip(waveNum, waveState, faction, siteConfig, target);
             }
 
-            this.positionTooltip(eventJQuery.pageX!, eventJQuery.pageY!);
+            let x = eventJQuery.pageX;
+            let y = eventJQuery.pageY;
+
+            if (x === undefined || y === undefined || (x === 0 && y === 0)) {
+                const rect = target.getBoundingClientRect();
+                x = rect.left + rect.width / 2 + (jq(window).scrollLeft() ?? 0);
+                y = rect.top + (jq(window).scrollTop() ?? 0);
+            }
+
+            this.positionTooltip(x, y);
         };
 
-        $(document).on("mouseenter", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", (eventJQuery) => {
+        jq(document).on("mouseenter", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", (eventJQuery) => {
             void showTooltip(eventJQuery.currentTarget as HTMLElement, eventJQuery);
         });
 
-        $(document).on("mouseleave", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", () => {
+        jq(document).on("mouseleave", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", () => {
             this.hideTooltip();
         });
 
-        $(document).on("click", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", (eventJQuery) => {
+        jq(document).on("click", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", (eventJQuery) => {
             eventJQuery.stopPropagation();
             const target = eventJQuery.currentTarget as HTMLElement;
-            const popover = $(".scoring-tooltip-popover");
+            const popover = jq(".scoring-tooltip-popover");
             if (popover.hasClass("visible") && popover.data("trigger") === target) {
                 this.hideTooltip();
             } else {
@@ -69,37 +93,44 @@ export class TooltipComponent {
             }
         });
 
-        $(document).on("click", (eventJQuery) => {
-            if ($(eventJQuery.target).closest(".scoring-tooltip-popover").length === 0) {
+        jq(document).on("click", (eventJQuery) => {
+            if (jq(eventJQuery.target).closest(".scoring-tooltip-popover").length === 0) {
                 this.hideTooltip();
             }
         });
     }
 
     public positionTooltip(x: number, y: number): void {
-        let left = x - this.$jqCard.outerWidth()! / 2;
-        let top = y - this.$jqCard.outerHeight()! - 15;
+        const $card = this.getCard();
+        const cardWidth = $card.outerWidth() ?? 200;
+        const cardHeight = $card.outerHeight() ?? 100;
 
-        const viewportWidth = $(window).width()!;
-        const scrollLeft = $(window).scrollLeft()!;
-        const scrollTop = $(window).scrollTop()!;
+        let left = x - cardWidth / 2;
+        let top = y - cardHeight - 15;
 
-        if (left + this.$jqCard.outerWidth()! > scrollLeft + viewportWidth) {
-            left = scrollLeft + viewportWidth - this.$jqCard.outerWidth()! - 15;
+        const jq = getJQuery();
+        const viewportWidth = jq(window).width() ?? window.innerWidth;
+        const scrollLeft = jq(window).scrollLeft() ?? 0;
+        const scrollTop = jq(window).scrollTop() ?? 0;
+
+        const padding = 8;
+        if (left + cardWidth > scrollLeft + viewportWidth - padding) {
+            left = scrollLeft + viewportWidth - cardWidth - padding;
         }
-        if (left < scrollLeft) {
-            left = scrollLeft + 15;
+        if (left < scrollLeft + padding) {
+            left = scrollLeft + padding;
         }
 
-        if (top < scrollTop) {
+        if (top < scrollTop + padding) {
             top = y + 20; // Flip downwards below target point
         }
 
-        this.$jqCard.css({ left, top });
+        $card.css({ left, top });
     }
 
     public showWaveTooltip(waveNum: number, waveState: WaveState, siteConfig: SiteConfig, siteRecord: SiteRecord, trigger: HTMLElement): void {
-        this.$jqCard.removeClass("bg-res bg-enl width-goals width-links").addClass("width-wave visible").data("trigger", trigger);
+        const $card = this.getCard();
+        $card.removeClass("bg-res bg-enl width-goals width-links").addClass("width-wave visible").data("trigger", trigger);
 
         const shards = (waveState.statistics?.shards?.moving ?? 0) + (waveState.statistics?.shards?.nonMoving ?? 0);
         const targets = waveState.statistics?.targetsCount ?? 0;
@@ -141,12 +172,13 @@ export class TooltipComponent {
                 </tbody>
             </table>
         `;
-        this.$jqCard.html(htmlContent);
+        $card.html(htmlContent);
     }
 
     public showGoalTooltip(waveNum: number, waveState: WaveState, faction: "ENL" | "RES", siteConfig: SiteConfig, siteRecord: SiteRecord, trigger: HTMLElement): void {
+        const $card = this.getCard();
         const factionClass = faction.toLowerCase();
-        this.$jqCard.removeClass("bg-res bg-enl width-wave width-links").addClass(`width-goals bg-${factionClass} visible`).data("trigger", trigger);
+        $card.removeClass("bg-res bg-enl width-wave width-links").addClass(`width-goals bg-${factionClass} visible`).data("trigger", trigger);
 
         const windows = waveState.shardActionWindows.filter((w) => w.actionType === "jump");
 
@@ -206,12 +238,13 @@ export class TooltipComponent {
                 </tbody>
             </table>
         `;
-        this.$jqCard.html(htmlContent);
+        $card.html(htmlContent);
     }
 
     public showLinkTooltip(waveNum: number, waveState: WaveState, faction: "ENL" | "RES", siteConfig: SiteConfig, trigger: HTMLElement): void {
+        const $card = this.getCard();
         const factionClass = faction.toLowerCase();
-        this.$jqCard.removeClass("bg-res bg-enl width-wave width-goals").addClass(`width-links bg-${factionClass} visible`).data("trigger", trigger);
+        $card.removeClass("bg-res bg-enl width-wave width-goals").addClass(`width-links bg-${factionClass} visible`).data("trigger", trigger);
 
         const windows = waveState.shardActionWindows.filter((w) => w.actionType === "jump");
         const scoringRules = {
@@ -301,10 +334,10 @@ export class TooltipComponent {
                 </tbody>
             </table>
         `;
-        this.$jqCard.html(htmlContent);
+        $card.html(htmlContent);
     }
 
     public hideTooltip(): void {
-        this.$jqCard.removeClass("visible").data("trigger", undefined);
+        this.$jqCard?.removeClass("visible").data("trigger", undefined);
     }
 }

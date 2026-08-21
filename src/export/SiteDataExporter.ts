@@ -17,6 +17,14 @@ export interface ExportStrategy<T> {
     getData(siteId: string, siteRecordManager: SiteRecordManager): Promise<T | undefined>;
 }
 
+interface AndroidBridge {
+    saveFile?: (filename: string, mime: string, content: string) => void;
+}
+
+interface IITCWindow {
+    android?: AndroidBridge;
+}
+
 /**
  * Concrete class that orchestrates the export process using a provided strategy.
  */
@@ -28,7 +36,14 @@ export class DataExporter {
     }
 
     private triggerDownload<T>(filename: string, data: T): void {
-        const json = JSON.stringify(data);
+        const json = JSON.stringify(data, undefined, 2);
+        const win = window as unknown as IITCWindow;
+
+        if (win.android && typeof win.android.saveFile === "function") {
+            win.android.saveFile(filename, "application/json", json);
+            return;
+        }
+
         const blob = new Blob([json], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");

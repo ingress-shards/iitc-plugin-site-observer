@@ -1,7 +1,13 @@
 @import "@ingress-shards/ingress-events-core";
 
-#dialog-site-observer {
+#dialog-site-observer,
+#site-observer.mobile-pane {
     padding: 0px;
+    box-sizing: border-box;
+    line-height: normal;
+}
+
+#dialog-site-observer {
     width: 500px !important;
     max-width: 500px;
     height: auto !important;
@@ -9,20 +15,43 @@
     max-height: 500px !important;
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
-    line-height: normal;
 }
 
-#dialog-site-observer section {
+#site-observer.mobile-pane {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #111;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+#site-observer.mobile-pane[style*="display: none"],
+#site-observer.mobile-pane.is-hidden {
+    display: none !important;
+}
+
+#dialog-site-observer section,
+#site-observer.mobile-pane section {
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-width: 450px;
     max-height: 100%;
     overflow: hidden;
 }
 
-#dialog-site-observer section main {
+#dialog-site-observer section {
+    min-width: 450px;
+}
+
+#dialog-site-observer section main,
+#site-observer.mobile-pane section main {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
@@ -36,14 +65,16 @@
     scrollbar-gutter: stable;
 }
 
-#dialog-site-observer section main .ui-label {
+#dialog-site-observer section main .ui-label,
+#site-observer.mobile-pane section main .ui-label {
     font-size: var(--shards-font-size-sm, 0.8rem);
     font-weight: 600;
     color: var(--shards-text-secondary, #bbb);
     letter-spacing: 0.01em;
 }
 
-#dialog-site-observer section main .site-controls {
+#dialog-site-observer section main .site-controls,
+#site-observer.mobile-pane section main .site-controls {
     padding: 5px;
     border-bottom: 1px solid var(--shards-border-color, #bbb);
     display: flex;
@@ -51,7 +82,8 @@
     align-items: center;
 }
 
-#dialog-site-observer section main .site-controls select {
+#dialog-site-observer section main .site-controls select,
+#site-observer.mobile-pane section main .site-controls select {
     margin-left: 10px;
     background: #222;
     color: #eee;
@@ -60,18 +92,21 @@
     border-radius: 4px;
 }
 
-#dialog-site-observer select optgroup {
+#dialog-site-observer select optgroup,
+#site-observer.mobile-pane select optgroup {
     color: var(--shards-signal-color, #FFCC00);
     font-weight: bold;
     font-style: normal;
 }
 
-#dialog-site-observer select option {
+#dialog-site-observer select option,
+#site-observer.mobile-pane select option {
     color: #eee;
     font-weight: normal;
 }
 
-#dialog-site-observer section footer {
+#dialog-site-observer section footer,
+#site-observer.mobile-pane section footer {
     flex-shrink: 0;
 
     display: flex;
@@ -365,17 +400,21 @@
     box-shadow: inset 0 0 0 1.5px var(--shards-enl-color, #03dc03) !important;
 }
 
-/* Site Row Header (replaces native summary) */
+/* Site Row Header (Responsive Flex-Wrap Layout) */
 .site-row-header {
     cursor: pointer;
     outline: none;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 5px;
+    gap: 4px 10px;
     width: 100%;
     box-sizing: border-box;
+    padding: 3px 2px;
 }
 
 /* Expand/Collapse Arrow */
@@ -386,39 +425,81 @@
     transition: transform 0.3s ease;
     transform-origin: center;
     color: #bbb;
+    margin-right: 2px;
 }
 
 .site-row.is-open .site-row-arrow {
     transform: rotate(90deg);
 }
 
-.site-summary-left {
+.site-header-primary {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 1;
+    flex: 1 1 200px;
     min-width: 0;
 }
 
-.site-row-header .site-label {
+.site-header-primary .site-label {
     font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: #eee;
+    font-size: 0.85rem;
+}
+
+.site-header-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .score-summary-block:not(:empty) {
-    width: 25%;
-    flex-shrink: 0;
+    font-size: var(--shards-font-size-xs, 0.75rem);
     color: #bbb;
+    white-space: nowrap;
 }
 
-.site-status-inline {
-    font-size: var(--shards-font-size-xs, 0.75rem);
-    color: var(--shards-text-secondary, #bbb);
+.site-status-badge {
+    font-size: var(--shards-font-size-xs, 0.72rem);
+    color: #94A3B8;
     text-align: center;
-    width: 15%;
-    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: normal;
+}
+
+.site-status-badge.phase-active {
+    background: rgba(255, 204, 0, 0.15);
+    border-color: rgba(255, 204, 0, 0.4);
+    color: var(--shards-signal-color, #FFCC00);
+}
+
+.site-status-badge.phase-scheduled,
+.site-status-badge.phase-discovery,
+.site-status-badge.phase-standby {
+    background: rgba(192, 132, 252, 0.15);
+    border-color: rgba(192, 132, 252, 0.35);
+    color: #C084FC;
+}
+
+.site-status-badge.phase-complete,
+.site-status-badge.phase-nodata,
+.site-status-badge.phase-processing,
+.site-status-badge.phase-unknown {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94A3B8;
 }
 
 /* CSS Grid Expand/Collapse Animation */
@@ -469,8 +550,11 @@
 }
 
 /* Button Styles */
-#dialog-site-observer button:has(svg) {
-    background: none;
+button.go-to-site-btn,
+.export-action-menu button,
+#dialog-site-observer button:has(svg),
+#site-observer.mobile-pane button:has(svg) {
+    background: transparent;
     border: none;
     border-radius: 4px;
     color: #eee;
@@ -478,13 +562,19 @@
     min-width: auto;
     padding: 3px;
     transition: background-color 0.5s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
-#dialog-site-observer button:hover:not(:disabled) {
+button.go-to-site-btn:hover:not(:disabled),
+.export-action-menu button:hover:not(:disabled),
+#dialog-site-observer button:hover:not(:disabled),
+#site-observer.mobile-pane button:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-#dialog-site-observer button:disabled {
+#dialog-site-observer button:disabled,
+#site-observer.mobile-pane button:disabled {
     opacity: 0.3;
     cursor: not-allowed;
 }
@@ -520,7 +610,8 @@ button.observer-button.warning-button {
     color: #fff;
 }
 
-#dialog-site-observer button.observer-button.warning-button:hover:not(:disabled) {
+#dialog-site-observer button.observer-button.warning-button:hover:not(:disabled),
+#site-observer.mobile-pane button.observer-button.warning-button:hover:not(:disabled) {
     background-color: #700;
     border-color: #a00;
 }
