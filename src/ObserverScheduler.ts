@@ -1,7 +1,7 @@
-import * as ZonedDateTime from "temporal-polyfill/fns/ZonedDateTime";
-import * as Duration from "temporal-polyfill/fns/Duration";
-import * as Instant from "temporal-polyfill/fns/Instant";
-import * as Now from "temporal-polyfill/fns/Now";
+import { toString as zdtToString } from "temporal-polyfill/fns/ZonedDateTime";
+import { fromFields as durationFromFields } from "temporal-polyfill/fns/Duration";
+import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
+import { instant } from "temporal-polyfill/fns/Now";
 import { formatDuration, type SeasonConfig, type EventTimeline } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand } from "./types/ObserverEvents";
 
@@ -25,7 +25,7 @@ export class ObserverScheduler {
     }
 
     private pushAlarmToTimetable(trigger: ObserverAlarm) {
-        const now = Now.instant().epochMilliseconds;
+        const now = instant().epochMilliseconds;
         const delay = trigger.timestamp - now;
 
         if (delay <= 0 || delay > MAX_TIMEOUT_MS) {
@@ -88,8 +88,8 @@ export class ObserverScheduler {
         const next = this.runQueue[0];
         if (!next) return;
 
-        const delay = Math.max(0, next.timestamp - Now.instant().epochMilliseconds);
-        const duration = Duration.fromFields({ milliseconds: delay });
+        const delay = Math.max(0, next.timestamp - instant().epochMilliseconds);
+        const duration = durationFromFields({ milliseconds: delay });
 
         console.log(
             `[Site Observer: Scheduler] ${next.siteId} - Next (${next.type}) in ${formatDuration(duration)} (delay ${delay} ms)`,
@@ -103,13 +103,13 @@ export class ObserverScheduler {
     }
 
     private dispatchEvent(alarm: ObserverAlarm): void {
-        const localZdt = Instant.toZonedDateTimeISO(
-            Instant.fromEpochMilliseconds(alarm.timestamp),
+        const localZdt = toZonedDateTimeISO(
+            fromEpochMilliseconds(alarm.timestamp),
             alarm.timeZone,
         );
 
         console.log(
-            `[Site Observer: Alarm] ${alarm.siteId} - ${alarm.type} at ${ZonedDateTime.toString(localZdt)}`,
+            `[Site Observer: Alarm] ${alarm.siteId} - ${alarm.type} at ${zdtToString(localZdt)}`,
         );
 
         const event = new CustomEvent<ObserverAlarm>(alarm.type, {
