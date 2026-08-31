@@ -73,7 +73,7 @@ module.exports = {
     [
       "@semantic-release/exec",
       {
-        "publishCmd": "yarn build:prod"
+        "publishCmd": "yarn build:dev && yarn build:prod"
       }
     ],
     [
@@ -81,12 +81,20 @@ module.exports = {
       {
         "assets": [
           {
-            "path": "dist/*.user.js",
+            "path": "dist/!(*.dev).user.js",
             "label": "IITC Plugin: Site Observer (User Script)"
           },
           {
-            "path": "dist/*.meta.js",
+            "path": "dist/!(*.dev).meta.js",
             "label": "IITC Plugin: Site Observer (Meta Script)"
+          },
+          {
+            "path": "dist/*.dev.user.js",
+            "label": "IITC Plugin: Site Observer (Dev User Script)"
+          },
+          {
+            "path": "dist/*.dev.meta.js",
+            "label": "IITC Plugin: Site Observer (Dev Meta Script)"
           }
         ]
       }
