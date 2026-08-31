@@ -1,4 +1,4 @@
-import * as Now from "temporal-polyfill/fns/Now";
+import { instant } from "temporal-polyfill/fns/Now";
 import type { IntelObserver } from "./IntelObserver";
 import { ShardJumpDataManager } from "../db/ShardJumpDataManager";
 import { ObserverResult } from "../types/ObserverEvents";
@@ -15,7 +15,7 @@ export class ShardObserver implements IntelObserver {
             async ({ result }: { result: string }) => {
                 try {
                     const rawData = JSON.parse(result);
-                    const timestamp = Now.instant().epochMilliseconds;
+                    const timestamp = instant().epochMilliseconds;
 
                     const captureData: ShardJumpCapture = {
                         ...rawData,
