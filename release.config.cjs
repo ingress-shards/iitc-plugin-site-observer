@@ -1,33 +1,6 @@
 /* eslint-disable no-template-curly-in-string */
-/**
- * Semantic Release Configuration
- * 
- * This file is dynamic to support branch names with forward slashes (e.g., feat/something).
- * Semver does not allow slashes in pre-release tags, so we sanitize them here.
- */
-const { execSync } = require('child_process');
-
-let branch = 'main';
-try {
-  branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-} catch (error) {
-  // Fallback for environments where git might not be available
-  branch = process.env.GITHUB_REF_NAME || 'main';
-}
-
-// Sanitize branch name for Semver compatibility (replace / with -)
-const sanitizedBranch = branch.replace(/\//g, '-');
-
 module.exports = {
-  branches: [
-    "main",
-    {
-      // If we're on a feature or fix branch, inject it as a pre-release branch
-      name: branch !== 'main' ? branch : 'non-existent-placeholder',
-      prerelease: sanitizedBranch,
-      channel: 'alpha'
-    }
-  ],
+  branches: ["main"],
   plugins: [
     [
       "@semantic-release/commit-analyzer",
