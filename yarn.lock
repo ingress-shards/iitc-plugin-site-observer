@@ -264,7 +264,7 @@ __metadata:
   resolution: "@ingress-shards/iitc-plugin-site-observer@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@ingress-shards/ingress-events-core": "npm:0.7.5"
+    "@ingress-shards/ingress-events-core": "npm:0.7.6"
     "@semantic-release/exec": "npm:^7.1.0"
     "@types/node": "npm:^26.4.1"
     concurrently: "npm:^10.0.5"
@@ -281,17 +281,17 @@ __metadata:
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.69.0"
     webpack: "npm:^5.110.3"
-    webpack-bundle-analyzer: "npm:^5.3.2"
+    webpack-bundle-analyzer: "npm:^5.3.3"
     webpack-cli: "npm:^7.2.3"
   languageName: unknown
   linkType: soft
 
-"@ingress-shards/ingress-events-core@npm:0.7.5":
-  version: 0.7.5
-  resolution: "@ingress-shards/ingress-events-core@npm:0.7.5::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.5%2F67d0bdfd8cab4fd68f900a1bd5b53152cc03a0c3"
+"@ingress-shards/ingress-events-core@npm:0.7.6":
+  version: 0.7.6
+  resolution: "@ingress-shards/ingress-events-core@npm:0.7.6::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.6%2F5d42dc0a3f4161b4004d517df7bb2ce7ddc14b5d"
   dependencies:
     temporal-polyfill: "npm:^1.0.4"
-  checksum: 10c0/92a6d9529714f36b59159f5cc8011da1b19aff52219544079fd0921df7fe78053f39744c4bc4f73ea1abc39e5190c6e860662286ff0796f86f4b40621fda92d5
+  checksum: 10c0/d69b32bb02fd88304e2326ad2b2f084ae68dca5d5d5494166add8673745a82c573e144aed7dc3f0e78ff0f30f379d3dc33f8b6b38e1c8a2b34a59bb649362fea
   languageName: node
   linkType: hard
 
@@ -7605,9 +7605,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack-bundle-analyzer@npm:^5.3.2":
-  version: 5.3.2
-  resolution: "webpack-bundle-analyzer@npm:5.3.2"
+"webpack-bundle-analyzer@npm:^5.3.3":
+  version: 5.3.3
+  resolution: "webpack-bundle-analyzer@npm:5.3.3"
   dependencies:
     "@discoveryjs/json-ext": "npm:^0.6.3"
     acorn: "npm:^8.0.4"
@@ -7621,7 +7621,7 @@ __metadata:
     ws: "npm:^8.19.0"
   bin:
     webpack-bundle-analyzer: lib/bin/analyzer.js
-  checksum: 10c0/e03f5d0c9173e55448992084419ae4405f04c0215e4ee5bc6a7d7a2da8b629240f943d0113dbaf5ebf152c136f3878a3482962b9fb2891ddbb0fb7fd69f3f76d
+  checksum: 10c0/370204652ff8adca1856f621581ff0a9a5e1bc92b2aacf062019252f7dbca39be270e20074297e3d60e4b5e0fb0b30156824b696b81fc22d8d0db53e8d3877b9
   languageName: node
   linkType: hard
 
