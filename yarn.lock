@@ -264,9 +264,9 @@ __metadata:
   resolution: "@ingress-shards/iitc-plugin-site-observer@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@ingress-shards/ingress-events-core": "npm:0.7.5"
+    "@ingress-shards/ingress-events-core": "npm:0.7.6"
     "@semantic-release/exec": "npm:^7.1.0"
-    "@types/node": "npm:^26.4.1"
+    "@types/node": "npm:^26.6.1"
     concurrently: "npm:^10.0.5"
     conventional-changelog-conventionalcommits: "npm:~9.3.1"
     eslint: "npm:^10.9.1"
@@ -276,22 +276,22 @@ __metadata:
     iitcpluginkit: "npm:^1.10.4"
     semantic-release: "npm:^25.0.9"
     source-map-loader: "npm:^5.0.0"
-    temporal-polyfill: "npm:^1.0.4"
+    temporal-polyfill: "npm:^1.0.5"
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.69.0"
-    webpack: "npm:^5.110.3"
-    webpack-bundle-analyzer: "npm:^5.3.2"
+    webpack: "npm:^5.111.0"
+    webpack-bundle-analyzer: "npm:^5.4.0"
     webpack-cli: "npm:^7.2.3"
   languageName: unknown
   linkType: soft
 
-"@ingress-shards/ingress-events-core@npm:0.7.5":
-  version: 0.7.5
-  resolution: "@ingress-shards/ingress-events-core@npm:0.7.5::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.5%2F67d0bdfd8cab4fd68f900a1bd5b53152cc03a0c3"
+"@ingress-shards/ingress-events-core@npm:0.7.6":
+  version: 0.7.6
+  resolution: "@ingress-shards/ingress-events-core@npm:0.7.6::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.7.6%2F5d42dc0a3f4161b4004d517df7bb2ce7ddc14b5d"
   dependencies:
     temporal-polyfill: "npm:^1.0.4"
-  checksum: 10c0/92a6d9529714f36b59159f5cc8011da1b19aff52219544079fd0921df7fe78053f39744c4bc4f73ea1abc39e5190c6e860662286ff0796f86f4b40621fda92d5
+  checksum: 10c0/d69b32bb02fd88304e2326ad2b2f084ae68dca5d5d5494166add8673745a82c573e144aed7dc3f0e78ff0f30f379d3dc33f8b6b38e1c8a2b34a59bb649362fea
   languageName: node
   linkType: hard
 
@@ -1050,12 +1050,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^26.1.2, @types/node@npm:^26.4.1":
+"@types/node@npm:*, @types/node@npm:^26.1.2":
   version: 26.5.1
   resolution: "@types/node@npm:26.5.1"
   dependencies:
     undici-types: "npm:~8.9.0"
   checksum: 10c0/40aa7aa4c099c8a08bf39b5bcb15eaf2cc073666c2191b1d9ac8243ce6b68b23ace904a044c521f6d310b70e94514b531be5f4fc184f141a7ce7f0679ebc7bb3
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^26.6.1":
+  version: 26.6.1
+  resolution: "@types/node@npm:26.6.1"
+  dependencies:
+    undici-types: "npm:~8.9.0"
+  checksum: 10c0/c90d3db40e7c9c92f0854ecdcaabd9c1923b7e2a43cf2c97cf147a5aba7e18a1c80034088edfb1bb2153ceffdd87be7ce0a256b80ec7cd92e619c564133ae5fe
   languageName: node
   linkType: hard
 
@@ -2612,6 +2621,16 @@ __metadata:
     graceful-fs: "npm:^4.2.4"
     tapable: "npm:^2.3.3"
   checksum: 10c0/76c32ce5485ecea0ef808c9289bc6f7c49ce85142943598d89a23a846f2909556d3dc6db97a007442a48c185baad5514c1c76d20a2656497f9511d13ccfab73b
+  languageName: node
+  linkType: hard
+
+"enhanced-resolve@npm:^5.25.0":
+  version: 5.25.1
+  resolution: "enhanced-resolve@npm:5.25.1"
+  dependencies:
+    graceful-fs: "npm:^4.2.4"
+    tapable: "npm:^2.3.3"
+  checksum: 10c0/c19ac10cd01f3c03648c0bc8fc981810490af6c10506e9ba4a300d57956c8948eeabf0e6af0d3bed91f37b89a775746664d5043c61c7c03a946f1a235013e955
   languageName: node
   linkType: hard
 
@@ -6390,6 +6409,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"schema-utils@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "schema-utils@npm:4.5.0"
+  dependencies:
+    "@types/json-schema": "npm:^7.0.15"
+    ajv: "npm:^8.20.0"
+    ajv-formats: "npm:^3.0.1"
+    ajv-keywords: "npm:^5.1.0"
+  checksum: 10c0/b2b8e6fc1b1f2abb30741a04e9d309879fd09afcea8c8aa163bdb380d8836ab4102f60a750cb1116c5e299f597cc8d59ee8f2bbee87dd7606d45e748ce901794
+  languageName: node
+  linkType: hard
+
 "semantic-release@npm:^25.0.9":
   version: 25.0.9
   resolution: "semantic-release@npm:25.0.9"
@@ -7045,6 +7076,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"temporal-polyfill@npm:^1.0.5":
+  version: 1.0.5
+  resolution: "temporal-polyfill@npm:1.0.5"
+  dependencies:
+    temporal-spec: "npm:1.0.1"
+    temporal-utils: "npm:1.0.3"
+  checksum: 10c0/88928e40e60d0da0c998af2b8da09768ee2c8784fec7526317fde83f55eb69926209a6bbc4360792cac7ace7371949718bc1f12edac1df0fe42eba5d55a43451
+  languageName: node
+  linkType: hard
+
 "temporal-spec@npm:1.0.1":
   version: 1.0.1
   resolution: "temporal-spec@npm:1.0.1"
@@ -7056,6 +7097,13 @@ __metadata:
   version: 1.0.2
   resolution: "temporal-utils@npm:1.0.2"
   checksum: 10c0/062cacb33662e4e2547e1ebea98e994d3835d98bf528744256714cd0c4219d43ffd526a500bbce12392468f802a01de058885e8d73453c11ed7ca67fa6e327fb
+  languageName: node
+  linkType: hard
+
+"temporal-utils@npm:1.0.3":
+  version: 1.0.3
+  resolution: "temporal-utils@npm:1.0.3"
+  checksum: 10c0/185928a75aba0496ebbbdecbbbbd55cc817756bc39e099424e86477da01042a84ed27482bfc2168b6802fed2f01f004739f174f907e2e125b2fa060a978024b6
   languageName: node
   linkType: hard
 
@@ -7605,9 +7653,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack-bundle-analyzer@npm:^5.3.2":
-  version: 5.3.2
-  resolution: "webpack-bundle-analyzer@npm:5.3.2"
+"webpack-bundle-analyzer@npm:^5.4.0":
+  version: 5.4.0
+  resolution: "webpack-bundle-analyzer@npm:5.4.0"
   dependencies:
     "@discoveryjs/json-ext": "npm:^0.6.3"
     acorn: "npm:^8.0.4"
@@ -7621,7 +7669,7 @@ __metadata:
     ws: "npm:^8.19.0"
   bin:
     webpack-bundle-analyzer: lib/bin/analyzer.js
-  checksum: 10c0/e03f5d0c9173e55448992084419ae4405f04c0215e4ee5bc6a7d7a2da8b629240f943d0113dbaf5ebf152c136f3878a3482962b9fb2891ddbb0fb7fd69f3f76d
+  checksum: 10c0/9378e00bc8be067f695d68bbb92ca9f40c890d3efeb790c2323c476492bf93d5ab3aa2ea8f17d4ae4cad3a7c773c300ae3d6b3ed9522a5a54724e297606f88da
   languageName: node
   linkType: hard
 
@@ -7690,7 +7738,37 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack@npm:^5.110.3, webpack@npm:^5.40.0":
+"webpack@npm:^5.111.0":
+  version: 5.111.0
+  resolution: "webpack@npm:5.111.0"
+  dependencies:
+    "@types/estree": "npm:^1.0.8"
+    "@types/json-schema": "npm:^7.0.15"
+    "@webassemblyjs/ast": "npm:^1.14.1"
+    "@webassemblyjs/wasm-edit": "npm:^1.14.1"
+    "@webassemblyjs/wasm-parser": "npm:^1.14.1"
+    browserslist: "npm:^4.28.1"
+    chrome-trace-event: "npm:^1.0.2"
+    enhanced-resolve: "npm:^5.25.0"
+    es-module-lexer: "npm:^2.1.0"
+    events: "npm:^3.2.0"
+    graceful-fs: "npm:^4.2.11"
+    mime-db: "npm:^1.54.0"
+    minimizer-webpack-plugin: "npm:^5.7.0"
+    schema-utils: "npm:^4.5.0"
+    tapable: "npm:^2.3.0"
+    watchpack: "npm:^2.5.2"
+    webpack-sources: "npm:^3.5.1"
+  peerDependenciesMeta:
+    webpack-cli:
+      optional: true
+  bin:
+    webpack: bin/webpack.js
+  checksum: 10c0/4b08f47bfead44215cd4f0aff83e5e98ae89c2b6339fdfba0267e873e9d330a9741ebe9f3d8aa12241ee3a297f8113f03544536ae7de0fc660d9660aea2f719f
+  languageName: node
+  linkType: hard
+
+"webpack@npm:^5.40.0":
   version: 5.110.3
   resolution: "webpack@npm:5.110.3"
   dependencies:
