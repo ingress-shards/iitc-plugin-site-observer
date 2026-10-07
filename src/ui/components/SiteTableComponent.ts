@@ -1,7 +1,7 @@
 import { fromFields } from "temporal-polyfill/fns/Duration";
 import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
 import { diff as diffZonedDateTime, toPlainDate, add as addZoned } from "temporal-polyfill/fns/ZonedDateTime";
-import { toString as dateToString } from "temporal-polyfill/fns/PlainDate";
+import { toString as dateToString, createFormat as createPlainDateFormat, type Record as PlainDateRecord } from "temporal-polyfill/fns/PlainDate";
 import {
     SitePhase,
     SiteManager,
@@ -44,14 +44,19 @@ export class SiteTableComponent {
         return siteConfigs;
     }
 
-    public static getDateOptionGroups(seasonConfig: Record<string, SeasonConfig>): DateOptionGroup[] {
+    public static getDateOptionGroups(
+        seasonConfig: Record<string, SeasonConfig>,
+        locales?: string | string[]
+    ): DateOptionGroup[] {
         const groups: DateOptionGroup[] = [];
-        
-        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const dateOptionFormatter = createPlainDateFormat(locales, {
+            weekday: "short",
+            day: "numeric",
+            month: "short"
+        });
 
         for (const season of Object.values(seasonConfig)) {
-            const uniqueDatesMap = new Map<string, any>();
+            const uniqueDatesMap = new Map<string, PlainDateRecord>();
             for (const siteConfig of Object.values(season.sites)) {
                 const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
                 const pd = toPlainDate(startDate);
@@ -63,21 +68,10 @@ export class SiteTableComponent {
                 // eslint-disable-next-line unicorn/no-array-sort, unicorn/prefer-iterator-to-array
                 const sortedKeys = [...uniqueDatesMap.keys()].sort((a, b) => a.localeCompare(b));
                 
-                const formattedDates = sortedKeys.map((dateKey) => {
-                    const pd = uniqueDatesMap.get(dateKey)!;
-                    // Zeller's congruence for day of week (0 = Sunday, 6 = Saturday)
-                    let y = Number(pd.year);
-                    const m = Number(pd.month);
-                    const d = Number(pd.day);
-                    const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
-                    y -= m < 3 ? 1 : 0;
-                    const dow = (y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) + (t[m - 1] ?? 0) + d) % 7;
-
-                    return {
-                        value: dateKey,
-                        label: `${days[dow] ?? ""} ${pd.day} ${months[pd.month - 1] ?? ""}`
-                    };
-                });
+                const formattedDates = sortedKeys.map((dateKey) => ({
+                    value: dateKey,
+                    label: dateOptionFormatter.format(uniqueDatesMap.get(dateKey)!)
+                }));
 
                 groups.push({
                     label: `${season.metadata.year}: ${season.metadata.name}`,
