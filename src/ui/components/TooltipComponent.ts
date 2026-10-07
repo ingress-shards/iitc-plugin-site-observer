@@ -1,16 +1,17 @@
-import type { SiteConfig, SiteRecord, WaveState } from "@ingress-shards/ingress-events-core";
-import { parseZonedDateTime, roundToDecimalPlaces } from "@ingress-shards/ingress-events-core";
+import type { SiteConfig, SiteRecord, WaveState, ShardJumpGroup } from "@ingress-shards/ingress-events-core";
+import { getShardJumpGroups, formatJumpGroupTime, roundToDecimalPlaces } from "@ingress-shards/ingress-events-core";
+import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 
 const pad = (num: number): string => String(num).padStart(2, "0");
 
 const formatTickTime = (timestamp: number, siteConfig: SiteConfig): string => {
-    try {
-        const timeZone = siteConfig.geocode.startTime.split("[", 2)[1]?.split("]", 2)[0] ?? "UTC";
-        const zdt = parseZonedDateTime(`${new Date(timestamp).toISOString()}[${timeZone}]`);
-        return `${pad(zdt.hour)}:${pad(zdt.minute)}`;
-    } catch {
-        return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-    }
+    const timeZone = siteConfig.geocode.timeZone ?? "UTC";
+    const zdt = toZonedDateTimeISO(fromEpochMilliseconds(timestamp), timeZone);
+    return `${pad(zdt.hour)}:${pad(zdt.minute)}`;
+};
+
+const formatGroupTime = (group: ShardJumpGroup, siteConfig: SiteConfig): string => {
+    return formatJumpGroupTime(group, siteConfig.geocode.timeZone ?? "UTC");
 };
 
 interface IITCWindow {
@@ -135,13 +136,17 @@ export class TooltipComponent {
         const shards = (waveState.statistics?.shards?.moving ?? 0) + (waveState.statistics?.shards?.nonMoving ?? 0);
         const targets = waveState.statistics?.targetsCount ?? 0;
 
+        const jumpGroupSize = siteConfig.display?.shards?.jumpGroupSize ?? 1;
+        const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
+
         let tableRows = "";
-        for (const window of waveState.shardActionWindows) {
-            const timeStr = formatTickTime(window.timestamp, siteConfig);
+        for (const group of groups) {
+            const timeStr = formatGroupTime(group, siteConfig);
+            const totalActions = group.windows.reduce((sum, w) => sum + w.historyCount, 0);
             tableRows += `
                 <tr>
-                    <td>${window.actionLabel ?? "Jump"}<span class="inline-time">${timeStr}</span></td>
-                    <td>${window.actionsCount}</td>
+                    <td>${group.label}<span class="inline-time">${timeStr}</span></td>
+                    <td>${totalActions}</td>
                 </tr>
             `;
         }
@@ -163,8 +168,8 @@ export class TooltipComponent {
             <table class="tooltip-table">
                 <thead>
                     <tr>
-                        <th style="text-align: center;">Jump</th>
-                        <th style="text-align: center;">Actions</th>
+                        <th>Jump</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -180,48 +185,48 @@ export class TooltipComponent {
         const factionClass = faction.toLowerCase();
         $card.removeClass("bg-res bg-enl width-wave width-links").addClass(`width-goals bg-${factionClass} visible`).data("trigger", trigger);
 
-        const windows = waveState.shardActionWindows.filter((w) => w.actionType === "jump");
+        const jumpGroupSize = siteConfig.display?.shards?.jumpGroupSize ?? 1;
+        const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
 
         // 1. Gather all target portals that scored in this wave
-        const scoredPortalsSet = new Set<string>();
-        for (const w of windows) {
+        const scoredPortalsSet = new Set<number>();
+        for (const w of waveState.shardJumpWindows) {
             const factionGoals = w.factionBreakdowns?.[faction]?.goals ?? [];
             for (const g of factionGoals) {
-                scoredPortalsSet.add(g.portalId.toString());
+                scoredPortalsSet.add(g.portalId);
             }
         }
 
-        // 2. Build header jump columns
+        // 2. Build header jump group columns
         const goalRules = Object.values(siteConfig.mechanics?.shards?.scoring?.goalScoringRules ?? {});
         let pointsLabel = "";
         if (goalRules.length === 1) {
-            const rule = goalRules[0] as any;
+            const rule = goalRules[0] as { points: number };
             pointsLabel = ` (${rule.points}pt)`;
         }
 
         let headerCols = `<th class="portal-col">Target Portal${pointsLabel}</th>`;
-        for (const w of windows) {
-            const timeStr = formatTickTime(w.timestamp, siteConfig);
-            headerCols += `<th>${w.actionLabel ?? "Jump"}<br><small>${timeStr}</small></th>`;
+        for (const group of groups) {
+            const timeStr = formatGroupTime(group, siteConfig);
+            headerCols += `<th>${group.label}<br><small>${timeStr}</small></th>`;
         }
 
         // 3. Build rows for each target portal
         let tableRows = "";
-        for (const portalIdStr of scoredPortalsSet) {
-            const portalId = Number(portalIdStr);
+        for (const portalId of scoredPortalsSet) {
             const portalName = siteRecord.observations?.portals?.[portalId]?.title ?? `Portal ${portalId}`;
 
             let rowHtml = `<td class="portal-name ${factionClass}-text" title="${portalName}">${portalName}</td>`;
-            for (const w of windows) {
-                const goalDetail = w.factionBreakdowns?.[faction]?.goals?.find((g) => g.portalId === portalId);
-                if (goalDetail) {
-                    const scoredValue = goalDetail.scoredCount;
-                    const unscoredValue = goalDetail.unscoredCount;
-                    const displayValue = unscoredValue > 0 ? `${scoredValue} (${unscoredValue})` : String(scoredValue);
-                    rowHtml += `<td>${displayValue}</td>`;
-                } else {
-                    rowHtml += `<td>-</td>`;
-                }
+            for (const group of groups) {
+                const groupGoals = group.windows
+                    .flatMap((w) => w.factionBreakdowns?.[faction]?.goals ?? [])
+                    .filter((g) => g.portalId === portalId);
+                const scoredValue = groupGoals.reduce((sum, g) => sum + g.scoredCount, 0);
+                const unscoredValue = groupGoals.reduce((sum, g) => sum + g.unscoredCount, 0);
+                const displayValue = scoredValue > 0 || unscoredValue > 0
+                    ? (unscoredValue > 0 ? `${scoredValue} (${unscoredValue})` : String(scoredValue))
+                    : "-";
+                rowHtml += `<td>${displayValue}</td>`;
             }
             tableRows += `<tr>${rowHtml}</tr>`;
         }
@@ -234,7 +239,7 @@ export class TooltipComponent {
                     </tr>
                 </thead>
                 <tbody>
-                    ${tableRows || `<tr><td colspan="${windows.length + 1}">No goals scored</td></tr>`}
+                    ${tableRows || `<tr><td colspan="${groups.length + 1}">No goals scored</td></tr>`}
                 </tbody>
             </table>
         `;
@@ -246,19 +251,21 @@ export class TooltipComponent {
         const factionClass = faction.toLowerCase();
         $card.removeClass("bg-res bg-enl width-wave width-goals").addClass(`width-links bg-${factionClass} visible`).data("trigger", trigger);
 
-        const windows = waveState.shardActionWindows.filter((w) => w.actionType === "jump");
+        const jumpGroupSize = siteConfig.display?.shards?.jumpGroupSize ?? 1;
+        const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
+
         const scoringRules = {
             ...siteConfig.mechanics?.shards?.scoring?.linkScoringRules,
             ...siteConfig.mechanics?.shards?.scoring?.goalScoringRules,
         };
 
-        const linkRules: [string, any][] = [];
+        const linkRules: [string, { label: string; points: number; tooltip?: string }][] = [];
         const matchedRuleKeys = new Set<string>();
-        for (const w of windows) {
+        for (const w of waveState.shardJumpWindows) {
             const factionData = w.factionBreakdowns?.[faction]?.links;
             if (factionData) {
                 for (const [ruleKey, count] of Object.entries(factionData)) {
-                    if (count > 0) {
+                    if (count && count > 0) {
                         matchedRuleKeys.add(ruleKey);
                     }
                 }
@@ -267,16 +274,16 @@ export class TooltipComponent {
         const linkScoringRules = siteConfig.mechanics?.shards?.scoring?.linkScoringRules ?? {};
         for (const key of matchedRuleKeys) {
             const rule = scoringRules[key];
-            if (Object.hasOwn(linkScoringRules, key)) {
+            if (rule && Object.hasOwn(linkScoringRules, key)) {
                 linkRules.push([key, rule]);
             }
         }
 
         // 1. Build headers
         let headerCols = `<th>Rule</th>`;
-        for (const w of windows) {
-            const timeStr = formatTickTime(w.timestamp, siteConfig);
-            headerCols += `<th>${w.actionLabel ?? "Jump"}<br><small>${timeStr}</small></th>`;
+        for (const group of groups) {
+            const timeStr = formatGroupTime(group, siteConfig);
+            headerCols += `<th>${group.label}<br><small>${timeStr}</small></th>`;
         }
         headerCols += `<th>Points</th>`;
 
@@ -289,8 +296,8 @@ export class TooltipComponent {
             let totalJumps = 0;
             let rowCellsHtml = "";
 
-            for (const w of windows) {
-                const count = w.factionBreakdowns?.[faction]?.links?.[ruleKey] ?? 0;
+            for (const group of groups) {
+                const count = group.windows.reduce((sum, w) => sum + (w.factionBreakdowns?.[faction]?.links?.[ruleKey] ?? 0), 0);
                 totalJumps += count;
                 rowCellsHtml += `<td>${count > 0 ? count : "-"}</td>`;
             }
@@ -298,18 +305,18 @@ export class TooltipComponent {
             const pointsEarned = roundToDecimalPlaces(totalJumps * pointsPerJump, 2);
             tableRows += `
                 <tr>
-                    <td title="${rule.tooltip}">${label} (${pointsPerJump}pt)</td>
+                    <td title="${rule.tooltip ?? ""}">${label} (${pointsPerJump}pt)</td>
                     ${rowCellsHtml}
                     <td class="${factionClass}-text">${pointsEarned > 0 ? `${pointsEarned} pts` : "-"}</td>
                 </tr>
             `;
         }
 
-        const hasMismatches = windows.some((w) => (w.factionBreakdowns?.[faction]?.linkAlignmentMismatches ?? 0) > 0);
+        const hasMismatches = waveState.shardJumpWindows.some((w) => (w.factionBreakdowns?.[faction]?.linkAlignmentMismatches ?? 0) > 0);
         if (hasMismatches) {
             let mismatchRowCells = "";
-            for (const w of windows) {
-                const count = w.factionBreakdowns?.[faction]?.linkAlignmentMismatches ?? 0;
+            for (const group of groups) {
+                const count = group.windows.reduce((sum, w) => sum + (w.factionBreakdowns?.[faction]?.linkAlignmentMismatches ?? 0), 0);
                 mismatchRowCells += `<td>${count > 0 ? count : "-"}</td>`;
             }
 
@@ -330,7 +337,7 @@ export class TooltipComponent {
                     </tr>
                 </thead>
                 <tbody>
-                    ${tableRows}
+                    ${tableRows || `<tr><td colspan="${groups.length + 2}">No links scored</td></tr>`}
                 </tbody>
             </table>
         `;
@@ -341,3 +348,4 @@ export class TooltipComponent {
         this.$jqCard?.removeClass("visible").data("trigger", undefined);
     }
 }
+
