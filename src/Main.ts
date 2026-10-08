@@ -41,27 +41,27 @@ interface IITCWindow {
 }
 
 class SiteObserver implements Plugin.Class {
-    private eventConfigRegistry: EventConfigRegistry;
+    private eventConfigRegistry!: EventConfigRegistry;
 
-    private siteRecordManager: SiteRecordManager;
-    private shardJumpDataManager: ShardJumpDataManager;
+    private siteRecordManager!: SiteRecordManager;
+    private shardJumpDataManager!: ShardJumpDataManager;
 
-    private observerScheduler: ObserverScheduler;
+    private observerScheduler!: ObserverScheduler;
 
-    private shardObserver: ShardObserver;
-    private preEventOrnamentObserver: PreEventOrnamentObserver;
+    private shardObserver!: ShardObserver;
+    private preEventOrnamentObserver!: PreEventOrnamentObserver;
 
-    private shardJumpIngestionService: ShardJumpIngestionService;
-    private preEventOrnamentIngestionService: PreEventOrnamentIngestionService;
-    private siteTargetPortalIngestionService: SiteTargetPortalIngestionService;
+    private shardJumpIngestionService!: ShardJumpIngestionService;
+    private preEventOrnamentIngestionService!: PreEventOrnamentIngestionService;
+    private siteTargetPortalIngestionService!: SiteTargetPortalIngestionService;
 
-    private eventCoordinator: EventCoordinator;
-    private view: ObserverView;
+    private eventCoordinator!: EventCoordinator;
+    private view!: ObserverView;
     private host?: ObserverHost;
-    private tooltipComponent: TooltipComponent;
+    private tooltipComponent!: TooltipComponent;
     private shortcutControl?: ShortcutControlComponent;
 
-    constructor() {
+    private initializeServices(): void {
         this.eventConfigRegistry = new EventConfigRegistry({
             eventBlueprints: eventBlueprints as EventBlueprints,
             seasonManifest: seasonManifest as SeasonManifest,
@@ -103,6 +103,25 @@ class SiteObserver implements Plugin.Class {
         this.tooltipComponent = new TooltipComponent();
     }
 
+    private initializeUI(): void {
+        this.host = this.isSmartphone()
+            ? new PaneHost(this.view)
+            : new DialogHost(this.view);
+
+        this.shortcutControl = new ShortcutControlComponent(this.host);
+
+        if (this.isSmartphone()) {
+            this.addMobilePane();
+        } else {
+            this.addMapControl();
+        }
+
+        this.tooltipComponent.bindEvents(
+            (id) => this.view.getSiteConfig(id),
+            (id) => this.view.getSiteRecord(id)
+        );
+    }
+
     private isSmartphone(): boolean {
         const win = window as unknown as IITCWindow;
         return win.isSmartphone?.() ?? win.useAndroidPanes?.() ?? false;
@@ -142,15 +161,12 @@ class SiteObserver implements Plugin.Class {
         }
     }
 
-    init() {
+    init(): void {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("./ui/styles.css");
 
-        this.host = this.isSmartphone()
-            ? new PaneHost(this.view)
-            : new DialogHost(this.view);
-
-        this.shortcutControl = new ShortcutControlComponent(this.host);
+        this.initializeServices();
+        this.initializeUI();
 
         this.eventCoordinator.bindEvents();
 
@@ -158,17 +174,6 @@ class SiteObserver implements Plugin.Class {
         for (const [siteId, triggers] of Object.entries(timetable)) {
             console.log(`[Site Observer: Timetable] ${siteId}: ${triggers.length} triggers`);
         }
-
-        if (this.isSmartphone()) {
-            this.addMobilePane();
-        } else {
-            this.addMapControl();
-        }
-
-        this.tooltipComponent.bindEvents(
-            (id) => this.view.getSiteConfig(id),
-            (id) => this.view.getSiteRecord(id)
-        );
 
         // Start passive ornament observation
         this.preEventOrnamentObserver.observe();
