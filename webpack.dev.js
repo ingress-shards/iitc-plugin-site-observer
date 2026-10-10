@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
 import { merge } from 'webpack-merge';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import baseDevConfig from 'iitcpluginkit/config/webpack.dev.js';
 import pluginJson from './plugin.json' with { type: 'json' };
 
@@ -54,6 +55,14 @@ export default merge(baseDevConfig, {
         devtoolModuleFilenameTemplate: 'file:///[resource-path]'
     },
     plugins: [
+        new CopyWebpackPlugin({
+            patterns: [
+                {
+                    from: path.resolve(__dirname, 'src/images/site-observer-icon.svg'),
+                    to: 'site-observer-icon.svg',
+                },
+            ],
+        }),
         new webpack.DefinePlugin({
             'process.env.APP_ENV': JSON.stringify('dev'),
             'process.env.DATABASE_NAME': JSON.stringify('iitc_site-observer-dev'),
