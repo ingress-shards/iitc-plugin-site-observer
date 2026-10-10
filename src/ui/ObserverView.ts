@@ -10,7 +10,7 @@ import {
 import { UITrigger } from "../types/ObserverEvents";
 import { SiteRecordManager } from "../db/SiteRecordManager";
 import { SiteTableComponent, type DateOptionGroup } from "./components/SiteTableComponent";
-import { ActionMenuComponent } from "./components/ActionMenuComponent";
+import { ToolsMenuComponent } from "./components/ToolsMenuComponent";
 import { ObserverScheduler } from "../ObserverScheduler";
 
 export interface ViewState {
@@ -31,7 +31,7 @@ export class ObserverView {
     private $root?: JQuery;
     private $tableContainer?: JQuery;
     private siteTableComponent: SiteTableComponent;
-    private actionMenuComponent: ActionMenuComponent;
+    private toolsMenuComponent: ToolsMenuComponent;
 
     private activeTimer?: number;
     private dataUpdateListener = () => { void this.updateSiteTable(); };
@@ -47,7 +47,7 @@ export class ObserverView {
             this.handleSiteSelected.bind(this),
             this.handleSiteToggled.bind(this)
         );
-        this.actionMenuComponent = new ActionMenuComponent(this.dataManager, () => this.viewState.selectedSiteId);
+        this.toolsMenuComponent = new ToolsMenuComponent(this.dataManager, () => this.viewState.selectedSiteId);
         this.viewState = {
             openSites: {},
         };
@@ -130,8 +130,8 @@ export class ObserverView {
             nextAlarmHtml = `<div class="next-alarm-label">next data update in ${formatDuration(duration, true)}</div>`;
         }
 
-        const actionMenuHtml = this.actionMenuComponent.render();
-        const shouldShowFooter = !!(nextAlarmHtml || actionMenuHtml);
+        const toolsMenuHtml = this.toolsMenuComponent.render();
+        const shouldShowFooter = !!(nextAlarmHtml || toolsMenuHtml);
 
         return `
             <section>
@@ -155,7 +155,7 @@ export class ObserverView {
                 <footer class="observer-footer">
                     <div class="observer-footer-content">
                         ${nextAlarmHtml}
-                        ${actionMenuHtml}
+                        ${toolsMenuHtml}
                     </div>
                 </footer>
                 ` : ""}
@@ -178,7 +178,7 @@ export class ObserverView {
             void this.updateSiteTable();
         });
 
-        this.actionMenuComponent.bindEvents($container);
+        this.toolsMenuComponent.bindEvents($container);
         this.siteTableComponent.bindEvents($container);
 
         void this.updateSiteTable();

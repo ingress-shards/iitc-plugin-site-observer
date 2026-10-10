@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
 import { merge } from 'webpack-merge';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import baseProdConfig from 'iitcpluginkit/config/webpack.prod.js';
 import pluginJson from './plugin.json' with { type: 'json' };
 
@@ -34,6 +35,14 @@ export default (env = {}) => merge(baseProdConfig, {
         },
     },
     plugins: [
+        new CopyWebpackPlugin({
+            patterns: [
+                {
+                    from: path.resolve(__dirname, 'src/images/site-observer-icon.svg'),
+                    to: 'site-observer-icon.svg',
+                },
+            ],
+        }),
         new webpack.DefinePlugin({
             'process.env.APP_ENV': JSON.stringify('prod'),
             'process.env.DATABASE_NAME': JSON.stringify('iitc_site-observer'),

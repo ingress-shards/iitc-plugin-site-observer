@@ -264,11 +264,12 @@ __metadata:
   resolution: "@ingress-shards/iitc-plugin-site-observer@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@ingress-shards/ingress-events-core": "npm:0.8.1"
+    "@ingress-shards/ingress-events-core": "npm:0.8.2"
     "@semantic-release/exec": "npm:^7.1.0"
     "@types/node": "npm:^26.6.4"
     concurrently: "npm:^10.0.5"
     conventional-changelog-conventionalcommits: "npm:~9.3.1"
+    copy-webpack-plugin: "npm:^14.0.0"
     eslint: "npm:^10.12.0"
     eslint-plugin-prefer-arrow-functions: "npm:^3.10.2"
     eslint-plugin-unicorn: "npm:^73.0.0"
@@ -287,12 +288,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ingress-shards/ingress-events-core@npm:0.8.1":
-  version: 0.8.1
-  resolution: "@ingress-shards/ingress-events-core@npm:0.8.1::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.8.1%2Fdba56ee510cf3033380b753c5995aa3ef4cb0fc4"
+"@ingress-shards/ingress-events-core@npm:0.8.2":
+  version: 0.8.2
+  resolution: "@ingress-shards/ingress-events-core@npm:0.8.2::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40ingress-shards%2Fingress-events-core%2F0.8.2%2Fa2e562ee67387efb42a652b3cf4079c5a4302523"
   dependencies:
     temporal-polyfill: "npm:^1.0.5"
-  checksum: 10c0/17adb5cc94f7e3712c7c3a5eb246a29d8dae30c5d275c01d4bc878536e5de9342e68fdec3cf34b9c6331ae7a4b5019ad6112a9d3691c4a0ca39f0564056c3c26
+  checksum: 10c0/0939d2f142fd46e477e818ce9ecd6e2f463723bcb8b856bbe9044884bcd8a40f64e1c7ad8b1dbf10f7cc9e27c20cca1d33b139529bcb634cbc023f2b7e27b33a
   languageName: node
   linkType: hard
 
@@ -2554,6 +2555,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"copy-webpack-plugin@npm:^14.0.0":
+  version: 14.0.0
+  resolution: "copy-webpack-plugin@npm:14.0.0"
+  dependencies:
+    glob-parent: "npm:^6.0.1"
+    normalize-path: "npm:^3.0.0"
+    schema-utils: "npm:^4.2.0"
+    serialize-javascript: "npm:^7.0.3"
+    tinyglobby: "npm:^0.2.12"
+  peerDependencies:
+    webpack: ^5.1.0
+  checksum: 10c0/1296bec96c9b7bb603c11aac95bc9580810e3f6be062044d2d4442c54d11ac5a0cd535e118fee6d65a83709a7a440e231686c0a2755f36df73061f7e4a0024d6
+  languageName: node
+  linkType: hard
+
 "core-js-compat@npm:^3.49.0":
   version: 3.50.0
   resolution: "core-js-compat@npm:3.50.0"
@@ -3763,7 +3779,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob-parent@npm:^6.0.2":
+"glob-parent@npm:^6.0.1, glob-parent@npm:^6.0.2":
   version: 6.0.2
   resolution: "glob-parent@npm:6.0.2"
   dependencies:
@@ -5476,6 +5492,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"normalize-path@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "normalize-path@npm:3.0.0"
+  checksum: 10c0/e008c8142bcc335b5e38cf0d63cfd39d6cf2d97480af9abdbe9a439221fd4d749763bab492a8ee708ce7a194bb00c9da6d0a115018672310850489137b3da046
+  languageName: node
+  linkType: hard
+
 "normalize-url@npm:^8.0.0":
   version: 8.1.1
   resolution: "normalize-url@npm:8.1.1"
@@ -7049,6 +7072,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"schema-utils@npm:^4.2.0, schema-utils@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "schema-utils@npm:4.5.0"
+  dependencies:
+    "@types/json-schema": "npm:^7.0.15"
+    ajv: "npm:^8.20.0"
+    ajv-formats: "npm:^3.0.1"
+    ajv-keywords: "npm:^5.1.0"
+  checksum: 10c0/b2b8e6fc1b1f2abb30741a04e9d309879fd09afcea8c8aa163bdb380d8836ab4102f60a750cb1116c5e299f597cc8d59ee8f2bbee87dd7606d45e748ce901794
+  languageName: node
+  linkType: hard
+
 "schema-utils@npm:^4.3.0, schema-utils@npm:^4.3.3":
   version: 4.4.0
   resolution: "schema-utils@npm:4.4.0"
@@ -7058,18 +7093,6 @@ __metadata:
     ajv-formats: "npm:^3.0.1"
     ajv-keywords: "npm:^5.1.0"
   checksum: 10c0/8eb2550fe71baa4d2d003102c70d681b4532d5ba0f5b7c5cd77953847d3ce26cf59901df0ce1d46613b440855bd99b592d90fc30dcd554e31ddad24c13f00202
-  languageName: node
-  linkType: hard
-
-"schema-utils@npm:^4.5.0":
-  version: 4.5.0
-  resolution: "schema-utils@npm:4.5.0"
-  dependencies:
-    "@types/json-schema": "npm:^7.0.15"
-    ajv: "npm:^8.20.0"
-    ajv-formats: "npm:^3.0.1"
-    ajv-keywords: "npm:^5.1.0"
-  checksum: 10c0/b2b8e6fc1b1f2abb30741a04e9d309879fd09afcea8c8aa163bdb380d8836ab4102f60a750cb1116c5e299f597cc8d59ee8f2bbee87dd7606d45e748ce901794
   languageName: node
   linkType: hard
 
@@ -7152,6 +7175,13 @@ __metadata:
     range-parser: "npm:^1.2.1"
     statuses: "npm:^2.0.2"
   checksum: 10c0/fbbbbdc902a913d65605274be23f3d604065cfc3ee3d78bf9fc8af1dc9fc82667c50d3d657f5e601ac657bac9b396b50ee97bd29cd55436320cf1cddebdcec72
+  languageName: node
+  linkType: hard
+
+"serialize-javascript@npm:^7.0.3":
+  version: 7.1.2
+  resolution: "serialize-javascript@npm:7.1.2"
+  checksum: 10c0/568ea22e16893a26cd2506433b8d98bb82f4af37e149330a3deb042bd417516988e6ca9a5010739e1a8dc4866caae320f582dfd2a1a0f0ab69ba3c03f1e155ba
   languageName: node
   linkType: hard
 

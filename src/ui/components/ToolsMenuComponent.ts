@@ -17,7 +17,7 @@ import { SiteRecordStrategy } from "../../export/SiteRecordExporter";
 import { SiteDiscoveryStrategy } from "../../export/SiteDiscoveryExporter";
 import { SiteTargetPortalStrategy } from "../../export/SiteTargetPortalExporter";
 
-export class ActionMenuComponent {
+export class ToolsMenuComponent {
     private lastDownloadJumpsTimestamp?: ReturnType<typeof zonedDateTimeISO>;
     private dataExporter: DataExporter;
 
@@ -80,12 +80,12 @@ export class ActionMenuComponent {
 
     public render(): string {
         return `
-            <details class="actions-menu">
-            <summary class="ui-label">Actions</summary>
-                <div class="site-actions">
+            <details class="tools-menu">
+            <summary class="ui-label">Tools</summary>
+                <div class="site-tools">
                     <span class="selected-site">Selected Site: <strong id="selected-site-name"></strong></span>
                     
-                    <div class="export-action-menu">
+                    <div class="export-tools-menu">
                         <button class="export-site-record-button" title="Export Site Record">
                             ${EXPORT_ICON_SVG}
                         </button>
@@ -100,7 +100,7 @@ export class ActionMenuComponent {
                         </button>
                     </div>
                 </div>
-                <div class="general-action-menu">
+                <div class="general-tools-menu">
                     <button id="manual-download-jumps-button" class="observer-button" title="Force Shard Jump Download from Intel site">Download Shard Jumps</button>
                     <button id="import-data-button" class="observer-button" title="Load Ornaments, Targets, or Shard Jumps from Local JSON or TXT files">Import from File</button>
                     <input type="file" id="import-data-file-input" style="display: none;" accept=".json,.txt,application/json,text/plain" multiple />

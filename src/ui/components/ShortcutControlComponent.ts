@@ -1,4 +1,5 @@
 import type { ObserverHost } from "../hosts/ObserverHost.js";
+import siteObserverIcon from "../../images/site-observer-icon.svg";
 
 /**
  * Custom Leaflet control that provides a shortcut button to toggle the Site Observer view.
@@ -31,10 +32,10 @@ export class ShortcutControlComponent {
         button.title = "Site Observer";
         button.setAttribute("role", "button");
 
-        // Use the icon from plugin.json (shared via DefinePlugin)
+        // Use the inlined vector icon for instant offline rendering
         button.innerHTML = `
             <div class="site-observer-icon-wrapper">
-                <img src="${process.env.PLUGIN_ICON}" class="site-observer-icon" alt="Site Observer">
+                <img src="${siteObserverIcon}" class="site-observer-icon" alt="Site Observer">
                 <div class="site-observer-signal-dot"></div>
             </div>
         `;
