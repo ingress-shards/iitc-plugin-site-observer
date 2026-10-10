@@ -263,7 +263,7 @@
     flex-shrink: 0;
 }
 
-.actions-menu {
+.tools-menu {
     width: 100%;
     border: 1px dashed #555;
     border-radius: 4px;
@@ -272,14 +272,14 @@
     box-sizing: border-box;
 }
 
-.actions-menu summary {
+.tools-menu summary {
     cursor: pointer;
     outline: none;
     user-select: none;
     padding: 5px 10px;
 }
 
-.actions-menu .site-actions {
+.tools-menu .site-tools {
     display: flex;
     gap: 4px;
     justify-content: center;
@@ -288,7 +288,7 @@
     margin-bottom: 10px;
 }
 
-.actions-menu .site-actions:has(#selected-site-name:empty) {
+.tools-menu .site-tools:has(#selected-site-name:empty) {
     display: none;
 }
 
@@ -296,8 +296,8 @@
     color: var(--shards-signal-color, #f00);
 }
 
-.actions-menu .export-action-menu,
-.actions-menu .general-action-menu {
+.tools-menu .export-tools-menu,
+.tools-menu .general-tools-menu {
     margin: 5px;
     display: flex;
     gap: 10px;
@@ -556,7 +556,7 @@
 
 /* Button Styles */
 button.go-to-site-btn,
-.export-action-menu button,
+.export-tools-menu button,
 #dialog-site-observer button:has(svg),
 #site-observer.mobile-pane button:has(svg) {
     background: transparent;
@@ -572,7 +572,7 @@ button.go-to-site-btn,
 }
 
 button.go-to-site-btn:hover:not(:disabled),
-.export-action-menu button:hover:not(:disabled),
+.export-tools-menu button:hover:not(:disabled),
 #dialog-site-observer button:hover:not(:disabled),
 #site-observer.mobile-pane button:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1);
@@ -599,7 +599,7 @@ button.observer-button {
     font-size: 0.8rem;
 }
 
-.actions-menu .site-actions button svg {
+.tools-menu .site-tools button svg {
     width: 20px;
     height: 20px;
 }
