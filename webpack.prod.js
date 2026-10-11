@@ -14,9 +14,6 @@ export default (env = {}) => merge(baseProdConfig, {
     context: path.resolve(__dirname),
     resolve: {
         symlinks: false,
-        alias: {
-            'temporal-polyfill': path.resolve(__dirname, 'node_modules/temporal-polyfill'),
-        }
     },
     resolveLoader: {
         modules: ['node_modules', path.resolve(__dirname, 'node_modules/iitcpluginkit/node_modules')],

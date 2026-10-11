@@ -23,16 +23,15 @@
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "eslint src",
     "analyze": "webpack --config webpack.prod.js --env analyze",
-    "sync:core": "node scripts/sync-local-core.js",
     "test": "vitest run",
-    "validate": "yarn sync:core && yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod && yarn test",
+    "validate": "yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod && yarn test",
     "validate:docker": "node scripts/validate.js"
   },
   "dependencies": {
     "@ingress-shards/ingress-events-core": "0.8.3",
     "idb": "^8.0.3",
     "iitcpluginkit": "^1.10.4",
-    "temporal-polyfill": "^1.0.5"
+    "temporal-polyfill": "~1.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

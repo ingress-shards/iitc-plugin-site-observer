@@ -10,20 +10,10 @@ import pluginJson from './plugin.json' with { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const corePath = path.resolve(__dirname, '../ingress-events-core');
-const hasLocalCore = fs.existsSync(corePath);
-
 const alias = {
-    'temporal-polyfill': path.resolve(__dirname, 'node_modules/temporal-polyfill'),
     '@ingress-shards/ingress-events-core/conf/recent/season_manifest.json': '@ingress-shards/ingress-events-core/conf/season_manifest.json',
     '@ingress-shards/ingress-events-core/conf/recent/season_geocode.json': '@ingress-shards/ingress-events-core/conf/season_geocode.json',
 };
-
-if (hasLocalCore) {
-    alias['@ingress-shards/ingress-events-core$'] = path.resolve(__dirname, '../ingress-events-core/dist/index.mjs');
-    alias['@ingress-shards/ingress-events-core/conf'] = path.resolve(__dirname, '../ingress-events-core/dist/conf');
-    alias['@ingress-shards/ingress-events-core/visuals'] = path.resolve(__dirname, '../ingress-events-core/dist/visuals');
-}
 
 export default merge(baseDevConfig, {
     context: path.resolve(__dirname),
