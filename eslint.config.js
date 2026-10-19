@@ -111,6 +111,12 @@ const config = tseslint.config(
             "unicorn/consistent-optional-chaining": "off",
             "unicorn/no-unsafe-string-replacement": "off",
             "unicorn/no-useless-undefined": "off",
+
+            // Rules requiring ECMAScript features beyond our ES2022 target:
+            // - prefer-iterator-to-array requires Iterator.prototype.toArray() (ES2025 proposal)
+            // - no-array-sort requires Array.prototype.toSorted() (ES2023)
+            "unicorn/prefer-iterator-to-array": "off",
+            "unicorn/no-array-sort": "off",
         },
     },
     {
