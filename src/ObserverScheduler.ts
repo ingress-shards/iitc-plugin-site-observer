@@ -2,7 +2,7 @@ import { toString as zdtToString } from "temporal-polyfill/fns/ZonedDateTime";
 import { fromFields as durationFromFields } from "temporal-polyfill/fns/Duration";
 import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 import { instant } from "temporal-polyfill/fns/Now";
-import { formatDuration, type SeasonConfig, type EventTimeline } from "@ingress-shards/ingress-events-core";
+import { formatDuration, type SiteConfig, type SiteTimeline } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand } from "./types/ObserverEvents";
 
 export interface ObserverAlarm {
@@ -19,7 +19,7 @@ export class ObserverScheduler {
     private runQueue: ObserverAlarm[] = [];
     private activeTimer?: NodeJS.Timeout;
 
-    constructor(private seasonConfig: Record<string, SeasonConfig>) {
+    constructor(private sites: Iterable<SiteConfig>) {
         this.buildTimetable();
         this.prepareRunQueue();
     }
@@ -41,7 +41,7 @@ export class ObserverScheduler {
         list.push(trigger);
     }
 
-    private buildTimetableForSite(siteId: string, timeZone: string, timeline: EventTimeline): void {
+    private buildTimetableForSite(siteId: string, timeZone: string, timeline: SiteTimeline): void {
         // 1. Fetch 5 minutes before the event starts
         this.pushAlarmToTimetable({
             siteId,
@@ -73,11 +73,9 @@ export class ObserverScheduler {
     }
 
     private buildTimetable(): void {
-        for (const season of Object.values(this.seasonConfig)) {
-            for (const [siteId, { geocode, timeline }] of Object.entries(season.sites)) {
-                if (timeline) {
-                    this.buildTimetableForSite(siteId, geocode.timeZone, timeline);
-                }
+        for (const { geocode, timeline } of this.sites) {
+            if (timeline) {
+                this.buildTimetableForSite(geocode.id, geocode.timeZone, timeline);
             }
         }
     }

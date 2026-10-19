@@ -1,6 +1,5 @@
 import { instant } from "temporal-polyfill/fns/Now";
 import type {
-    Ornament,
     MapPortalCapture,
     MapSnapshot,
 } from "@ingress-shards/ingress-events-core";
@@ -14,16 +13,11 @@ interface IITCMapData {
 }
 
 export class PreEventOrnamentObserver implements IntelObserver {
-    private preEventOrnamentIds: string[];
     private isHooked = false;
 
     constructor(
-        private blueprintOrnaments: Record<string, Ornament>,
-    ) {
-        this.preEventOrnamentIds = Object.entries(this.blueprintOrnaments)
-            .filter(([_, data]) => data.tags.includes("pre-event"))
-            .map(([id]) => id);
-    }
+        private preEventOrnamentIds: string[],
+    ) {}
 
     private setupPassiveHooks(): void {
         if (this.isHooked) return;
