@@ -2,9 +2,8 @@ import { zonedDateTimeISO, instant } from "temporal-polyfill/fns/Now";
 import { diff as diffZonedDateTime } from "temporal-polyfill/fns/ZonedDateTime";
 import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 import {
-    type SeasonConfig,
+    type EventConfigRegistry,
     type SiteConfig,
-    type SiteRecord,
     formatDuration,
 } from "@ingress-shards/ingress-events-core";
 import { UITrigger } from "../types/ObserverEvents";
@@ -37,13 +36,13 @@ export class ObserverView {
     private dataUpdateListener = () => { void this.updateSiteTable(); };
 
     constructor(
-        private seasonConfig: Record<string, SeasonConfig>,
+        private registry: EventConfigRegistry,
         private dataManager: SiteRecordManager,
         private scheduler: ObserverScheduler,
     ) {
         this.siteTableComponent = new SiteTableComponent(
             this.dataManager,
-            this.seasonConfig,
+            this.registry,
             this.handleSiteSelected.bind(this),
             this.handleSiteToggled.bind(this)
         );
@@ -113,8 +112,8 @@ export class ObserverView {
     }
 
     private buildHtml(): string {
-        this.siteConfigsByDate ??= SiteTableComponent.getSiteConfigsByDate(this.seasonConfig);
-        this.dateOptionGroups ??= SiteTableComponent.getDateOptionGroups(this.seasonConfig);
+        this.siteConfigsByDate ??= SiteTableComponent.getSiteConfigsByDate(this.registry.getAllSites());
+        this.dateOptionGroups ??= SiteTableComponent.getDateOptionGroups(this.registry);
 
         const nextAlarm = this.scheduler.getNextAlarm();
         let nextAlarmHtml = "";
@@ -199,18 +198,6 @@ export class ObserverView {
         this.$tableContainer = undefined;
     }
 
-    public getSiteConfig(siteId: string): SiteConfig | undefined {
-        if (!this.siteConfigsByDate) return undefined;
-        for (const list of Object.values(this.siteConfigsByDate)) {
-            const found = list.find(c => c.geocode.id === siteId);
-            if (found) return found;
-        }
-        return undefined;
-    }
-
-    public async getSiteRecord(siteId: string): Promise<SiteRecord | undefined> {
-        return this.dataManager.get(siteId);
-    }
 
     public async updateSiteTable(): Promise<void> {
         if (!this.$tableContainer || !this.siteConfigsByDate || !this.viewState) return;

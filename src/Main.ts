@@ -5,6 +5,7 @@ import seasonGeocode from "@ingress-shards/ingress-events-core/conf/recent/seaso
 
 import {
     EventConfigRegistry,
+    getOrnamentIdsByTag,
     type EventBlueprints,
     type Ornament,
     type SeasonGeocode,
@@ -62,18 +63,18 @@ class SiteObserver implements Plugin.Class {
     private shortcutControl?: ShortcutControlComponent;
 
     private initializeServices(): void {
-        this.eventConfigRegistry = new EventConfigRegistry({
-            eventBlueprints: eventBlueprints as EventBlueprints,
-            seasonManifest: seasonManifest as SeasonManifest,
-            seasonGeocode: seasonGeocode as SeasonGeocode,
-        });
+        this.eventConfigRegistry = new EventConfigRegistry(
+            eventBlueprints as EventBlueprints,
+            seasonManifest as SeasonManifest,
+            seasonGeocode as SeasonGeocode
+        );
 
         this.siteRecordManager = new SiteRecordManager();
         this.shardJumpDataManager = new ShardJumpDataManager();
 
         this.shardObserver = new ShardObserver(this.shardJumpDataManager);
         this.preEventOrnamentObserver = new PreEventOrnamentObserver(
-            eventBlueprints.ornaments as Record<string, Ornament>,
+            getOrnamentIdsByTag(this.eventConfigRegistry.blueprints, "pre-event")
         );
 
         this.shardJumpIngestionService = new ShardJumpIngestionService(
@@ -90,7 +91,7 @@ class SiteObserver implements Plugin.Class {
             this.siteRecordManager,
         );
 
-        this.observerScheduler = new ObserverScheduler(this.eventConfigRegistry.seasons);
+        this.observerScheduler = new ObserverScheduler(this.eventConfigRegistry.getAllSites());
 
         this.eventCoordinator = new EventCoordinator(
             this.shardObserver,
@@ -99,8 +100,8 @@ class SiteObserver implements Plugin.Class {
             this.siteTargetPortalIngestionService
         );
 
-        this.view = new ObserverView(this.eventConfigRegistry.seasons, this.siteRecordManager, this.observerScheduler);
-        this.tooltipComponent = new TooltipComponent();
+        this.view = new ObserverView(this.eventConfigRegistry, this.siteRecordManager, this.observerScheduler);
+        this.tooltipComponent = new TooltipComponent(this.eventConfigRegistry);
     }
 
     private initializeUI(): void {
@@ -117,8 +118,8 @@ class SiteObserver implements Plugin.Class {
         }
 
         this.tooltipComponent.bindEvents(
-            (id) => this.view.getSiteConfig(id),
-            (id) => this.view.getSiteRecord(id)
+            (id) => this.eventConfigRegistry.getSiteConfig(id),
+            (id) => this.siteRecordManager.get(id)
         );
     }
 

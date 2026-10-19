@@ -1,4 +1,4 @@
-import type { SiteConfig, SiteRecord, WaveState, ShardJumpGroup } from "@ingress-shards/ingress-events-core";
+import type { SiteConfig, SiteRecord, WaveState, ShardJumpGroup, EventConfigRegistry } from "@ingress-shards/ingress-events-core";
 import { getShardJumpGroups, formatJumpGroupTime, roundToDecimalPlaces } from "@ingress-shards/ingress-events-core";
 import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 
@@ -26,6 +26,8 @@ const getJQuery = (): JQueryStatic => {
 
 export class TooltipComponent {
     private $jqCard?: JQuery;
+
+    constructor(private registry: EventConfigRegistry) {}
 
     private getCard(): JQuery {
         if (!this.$jqCard) {
@@ -136,7 +138,7 @@ export class TooltipComponent {
         const shards = (waveState.statistics?.shards?.moving ?? 0) + (waveState.statistics?.shards?.nonMoving ?? 0);
         const targets = waveState.statistics?.targetsCount ?? 0;
 
-        const jumpGroupSize = siteConfig.display?.shards?.jumpGroupSize ?? 1;
+        const jumpGroupSize = siteConfig.timeline.jumpGroupSize ?? 1;
         const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
 
         let tableRows = "";
@@ -155,7 +157,7 @@ export class TooltipComponent {
         const startTimeStr = waveConfig ? formatTickTime(waveConfig.start, siteConfig) : "?";
         const endTimeStr = waveConfig ? formatTickTime(waveConfig.end, siteConfig) : "?";
         let waveItemsHtml = `Shards: ${shards}`;
-        if (siteConfig.mechanics.shards?.targetMechanics) {
+        if ((siteConfig.timeline.targets?.length ?? 0) > 0) {
             waveItemsHtml += ` / Targets: ${targets}`;
         }
 
@@ -185,7 +187,7 @@ export class TooltipComponent {
         const factionClass = faction.toLowerCase();
         $card.removeClass("bg-res bg-enl width-wave width-links").addClass(`width-goals bg-${factionClass} visible`).data("trigger", trigger);
 
-        const jumpGroupSize = siteConfig.display?.shards?.jumpGroupSize ?? 1;
+        const jumpGroupSize = siteConfig.timeline.jumpGroupSize ?? 1;
         const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
 
         // 1. Gather all target portals that scored in this wave
@@ -198,10 +200,13 @@ export class TooltipComponent {
         }
 
         // 2. Build header jump group columns
-        const goalRules = Object.values(siteConfig.mechanics?.shards?.scoring?.goalScoringRules ?? {});
+        const season = this.registry.getSeasonMetadata(siteConfig.seasonId);
+        const component = season?.components.find((c) => c.eventType === siteConfig.geocode.eventType);
+        const goalRuleKeys = component?.mechanics.shards?.scoring?.goalRules ?? [];
+        const goalRules = goalRuleKeys.map((k: string) => this.registry.blueprints.goalScoringRules?.[k]).filter(Boolean);
         let pointsLabel = "";
         if (goalRules.length === 1) {
-            const rule = goalRules[0] as { points: number };
+            const rule = goalRules[0]!;
             pointsLabel = ` (${rule.points}pt)`;
         }
 
@@ -251,12 +256,12 @@ export class TooltipComponent {
         const factionClass = faction.toLowerCase();
         $card.removeClass("bg-res bg-enl width-wave width-goals").addClass(`width-links bg-${factionClass} visible`).data("trigger", trigger);
 
-        const jumpGroupSize = siteConfig.display?.shards?.jumpGroupSize ?? 1;
+        const jumpGroupSize = siteConfig.timeline.jumpGroupSize ?? 1;
         const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
 
         const scoringRules = {
-            ...siteConfig.mechanics?.shards?.scoring?.linkScoringRules,
-            ...siteConfig.mechanics?.shards?.scoring?.goalScoringRules,
+            ...this.registry.blueprints.linkScoringRules,
+            ...this.registry.blueprints.goalScoringRules,
         };
 
         const linkRules: [string, { label: string; points: number; tooltip?: string }][] = [];
@@ -271,10 +276,12 @@ export class TooltipComponent {
                 }
             }
         }
-        const linkScoringRules = siteConfig.mechanics?.shards?.scoring?.linkScoringRules ?? {};
+        const season = this.registry.getSeasonMetadata(siteConfig.seasonId);
+        const component = season?.components.find((c) => c.eventType === siteConfig.geocode.eventType);
+        const linkRuleKeys = component?.mechanics.shards?.scoring?.linkRules ?? [];
         for (const key of matchedRuleKeys) {
             const rule = scoringRules[key];
-            if (rule && Object.hasOwn(linkScoringRules, key)) {
+            if (rule && linkRuleKeys.includes(key)) {
                 linkRules.push([key, rule]);
             }
         }
