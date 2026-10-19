@@ -95,7 +95,7 @@ export class ScoringTableComponent {
             totalPointsResistance = wavePointsList.reduce((sum, w) => sum + w.totalResistance, 0);
         }
 
-        const hasGoals = siteConfig.mechanics?.shards?.targetMechanics !== undefined;
+        const hasGoals = (siteConfig.timeline.targets?.length ?? 0) > 0;
         const contributingResistanceWaves = analysis.seasonPoints?.contributingWaves?.RES ?? [];
         const contributingEnlightenedWaves = analysis.seasonPoints?.contributingWaves?.ENL ?? [];
 

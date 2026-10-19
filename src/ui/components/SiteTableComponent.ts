@@ -12,7 +12,7 @@ import {
     parseZonedDateTime,
     roundToDecimalPlaces
 } from "@ingress-shards/ingress-events-core";
-import type { SeasonConfig, SiteConfig, SiteRecord, SiteManifestMetadata } from "@ingress-shards/ingress-events-core";
+import type { SiteConfig, SiteRecord, EventConfigRegistry } from "@ingress-shards/ingress-events-core";
 import { SiteRecordManager } from "../../db/SiteRecordManager";
 import { ScoringTableComponent } from "./ScoringTableComponent";
 import type { ViewState } from "../ObserverView.js";
@@ -31,21 +31,19 @@ export interface DateOptionGroup {
 }
 
 export class SiteTableComponent {
-    public static getSiteConfigsByDate(seasonConfig: Record<string, SeasonConfig>): Record<string, SiteConfig[]> {
+    public static getSiteConfigsByDate(sites: SiteConfig[]): Record<string, SiteConfig[]> {
         const siteConfigs: Record<string, SiteConfig[]> = {};
-        for (const season of Object.values(seasonConfig)) {
-            for (const siteConfig of Object.values(season.sites)) {
-                const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
-                const dateKey = dateToString(toPlainDate(startDate));
-                const list = (siteConfigs[dateKey] ??= []);
-                list.push(siteConfig);
-            }
+        for (const siteConfig of sites) {
+            const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
+            const dateKey = dateToString(toPlainDate(startDate));
+            const list = (siteConfigs[dateKey] ??= []);
+            list.push(siteConfig);
         }
         return siteConfigs;
     }
 
     public static getDateOptionGroups(
-        seasonConfig: Record<string, SeasonConfig>,
+        registry: EventConfigRegistry,
         locales?: string | string[]
     ): DateOptionGroup[] {
         const groups: DateOptionGroup[] = [];
@@ -55,9 +53,12 @@ export class SiteTableComponent {
             month: "short"
         });
 
-        for (const season of Object.values(seasonConfig)) {
+        for (const seasonId of registry.getAllSeasonIds()) {
+            const season = registry.getSeasonMetadata(seasonId);
+            if (!season) continue;
+            const sites = registry.getSitesForSeason(seasonId);
             const uniqueDatesMap = new Map<string, PlainDateRecord>();
-            for (const siteConfig of Object.values(season.sites)) {
+            for (const siteConfig of sites) {
                 const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
                 const pd = toPlainDate(startDate);
                 const dateKey = dateToString(pd);
@@ -65,7 +66,6 @@ export class SiteTableComponent {
             }
 
             if (uniqueDatesMap.size > 0) {
-                // eslint-disable-next-line unicorn/no-array-sort, unicorn/prefer-iterator-to-array
                 const sortedKeys = [...uniqueDatesMap.keys()].sort((a, b) => a.localeCompare(b));
                 
                 const formattedDates = sortedKeys.map((dateKey) => ({
@@ -74,8 +74,8 @@ export class SiteTableComponent {
                 }));
 
                 groups.push({
-                    label: `${season.metadata.year}: ${season.metadata.name}`,
-                    seasonId: season.metadata.id,
+                    label: `${season.year}: ${season.name}`,
+                    seasonId: season.id,
                     dates: formattedDates
                 });
             }
@@ -95,26 +95,10 @@ export class SiteTableComponent {
 
     constructor(
         private dataManager: SiteRecordManager,
-        private seasonConfig: Record<string, SeasonConfig>,
+        private registry: EventConfigRegistry,
         private onSiteSelected: (siteId: string) => void,
         private onSiteToggled: (siteId: string, isOpen: boolean) => void
     ) {}
-
-    private getSiteManifestMetadata(siteConfig: SiteConfig): SiteManifestMetadata | undefined {
-        for (const season of Object.values(this.seasonConfig)) {
-            for (const component of season.metadata.components) {
-                if (component.eventType === siteConfig.geocode.eventType && component.schedule) {
-                    for (const day of component.schedule) {
-                        const match = day.sites.find(s => s.latE6 === siteConfig.geocode.latE6 && s.lngE6 === siteConfig.geocode.lngE6);
-                        if (match) {
-                            return match;
-                        }
-                    }
-                }
-            }
-        }
-        return undefined;
-    }
 
     private getSiteStatus(siteConfig: SiteConfig, actualShards: number = 0, hasOrnaments: boolean = false): { sitePhase: SitePhase; timeRemaining: Temporal.DurationLikeObject | undefined } {
         if (!siteConfig) {
@@ -122,15 +106,11 @@ export class SiteTableComponent {
         }
 
         const startTimeZoned = parseZonedDateTime(siteConfig.geocode.startTime);
-        const shardMechanics = siteConfig.mechanics.shards?.shardMechanics;
-        const durationMins = shardMechanics ? SiteManager.getEventDuration(shardMechanics) : 0;
+        const durationMins = siteConfig.timeline.durationMinutes;
         const endTimeZoned = addZoned(startTimeZoned, fromFields({ minutes: durationMins }));
         const nowZoned = zonedDateTimeISO(startTimeZoned.timeZoneId);
 
-        const metadata = this.getSiteManifestMetadata(siteConfig);
-        const expectedShards = shardMechanics 
-            ? SiteManager.getExpectedShardCount(shardMechanics, metadata) 
-            : 0;
+        const expectedShards = siteConfig.timeline.shards.reduce((sum, w) => sum + (w.expectedShards ?? 0), 0);
 
         const sitePhase = SiteManager.calculatePhase({
             startTime: startTimeZoned,
@@ -285,9 +265,7 @@ export class SiteTableComponent {
                 const siteId = $row.data("site-id") as string;
                 if (!siteId) return;
 
-                const selectedSite: SiteConfig | undefined = Object.values(this.seasonConfig)
-                    .flatMap((season) => Object.values(season.sites))
-                    .find((site) => site.geocode.id === siteId);
+                const selectedSite = this.registry.getSiteConfig(siteId);
                 const actualShards = Number($row.attr("data-actual-shards") ?? "0");
                 const hasOrnaments = $row.attr("data-has-ornaments") === "true";
                 
@@ -323,10 +301,7 @@ export class SiteTableComponent {
             if (siteId) {
                 this.onSiteSelected(siteId);
 
-                const selectedSite: SiteConfig | undefined = Object.values(this.seasonConfig)
-                    .flatMap((season) => Object.values(season.sites))
-                    .find((site) => site.geocode.id === siteId);
-                
+                const selectedSite = this.registry.getSiteConfig(siteId);
                 if (!selectedSite) return;
 
                 let latE6 = selectedSite.geocode.latE6;
