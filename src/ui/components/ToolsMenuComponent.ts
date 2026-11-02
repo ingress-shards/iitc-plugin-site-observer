@@ -2,16 +2,15 @@ import { total } from "temporal-polyfill/fns/Duration";
 import { diff as diffZonedDateTime } from "temporal-polyfill/fns/ZonedDateTime";
 import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
 import {
-    parseTimestampFromFilename,
-    convertSiteDiscoveryToMapSnapshot,
-    type SiteDiscovery,
     EXPORT_ICON_SVG,
     getOrnamentSVG,
     getTargetOrnamentSVG,
     UI_COLORS,
+    type IngestionItem,
 } from "@ingress-shards/ingress-events-core";
-import { ObserverCommand, ObserverResult, UITrigger } from "../../types/ObserverEvents";
+import { ObserverCommand, UITrigger } from "../../types/ObserverEvents";
 import type { SiteRecordManager } from "../../db/SiteRecordManager";
+import type { IntelIngestionService } from "../../IntelIngestionService";
 import { DataExporter } from "../../export/SiteDataExporter";
 import { SiteRecordStrategy } from "../../export/SiteRecordExporter";
 import { SiteDiscoveryStrategy } from "../../export/SiteDiscoveryExporter";
@@ -23,59 +22,10 @@ export class ToolsMenuComponent {
 
     constructor(
         private dataManager: SiteRecordManager,
+        private ingestionService: IntelIngestionService,
         private getSelectedSiteId: () => string | undefined
     ) {
         this.dataExporter = new DataExporter(this.dataManager);
-    }
-
-    private ingestContent(rawFilename: string, content: string): void {
-        let filename = rawFilename;
-        if (filename.endsWith(".txt")) {
-            filename = filename.slice(0, -4);
-        }
-        if (!filename.endsWith(".json") && !filename.includes(".")) {
-            filename += ".json";
-        }
-
-        const data: unknown = JSON.parse(content);
-
-        if (filename.startsWith("ornamented-portals")) {
-            const parsedTimestamp = parseTimestampFromFilename(filename);
-            if (parsedTimestamp === undefined) {
-                throw new Error(`Could not parse timestamp from filename: ${filename}`);
-            }
-            const snapshot = convertSiteDiscoveryToMapSnapshot(data as SiteDiscovery, parsedTimestamp);
-            window.dispatchEvent(
-                new CustomEvent(ObserverResult.PRE_EVENT_ORNAMENTS_OBSERVED, {
-                    detail: snapshot,
-                }),
-            );
-            console.log(`[Site Observer] Ornaments loaded successfully from ${filename}.`);
-        } else if (filename.startsWith("target-portals")) {
-            window.dispatchEvent(
-                new CustomEvent(ObserverResult.SITE_TARGETS_OBSERVED, {
-                    detail: data,
-                }),
-            );
-            console.log(`[Site Observer] Target portals loaded successfully from ${filename}.`);
-        } else if (filename.startsWith("shard-jump-times")) {
-            const parsedTimestamp = parseTimestampFromFilename(filename);
-            if (parsedTimestamp === undefined) {
-                throw new Error(`Could not parse timestamp from filename: ${filename}`);
-            }
-            const captureData = {
-                ...(data as object),
-                timestamp: parsedTimestamp,
-            };
-            window.dispatchEvent(
-                new CustomEvent(ObserverResult.SHARD_JUMPS_OBSERVED, {
-                    detail: captureData,
-                }),
-            );
-            console.log(`[Site Observer] Shard jumps loaded successfully from ${filename}.`);
-        } else {
-            throw new Error(`Unrecognized filename prefix for import: ${filename}`);
-        }
     }
 
     public render(): string {
@@ -148,14 +98,18 @@ export class ToolsMenuComponent {
             const files = Array.from(input.files);
             input.value = ""; // Reset input so same files can be selected again if needed
 
-            for (const file of files) {
-                try {
-                    const content = await file.text();
-                    this.ingestContent(file.name, content);
-                } catch (error: unknown) {
-                    console.error(`[Site Observer] Failed to process ${file.name}:`, error);
-                    alert(error instanceof Error ? error.message : `Failed to process ${file.name}. Check console for details.`);
-                }
+            try {
+                const items: IngestionItem[] = await Promise.all(
+                    files.map(async (file) => ({
+                        filename: file.name,
+                        data: await file.text(),
+                    }))
+                );
+                await this.ingestionService.ingest(items);
+                console.log(`[Site Observer] Successfully imported ${items.length} file(s).`);
+            } catch (error: unknown) {
+                console.error("[Site Observer] Failed to process files:", error);
+                alert(error instanceof Error ? error.message : "Failed to process files. Check console for details.");
             }
         });
 
@@ -179,7 +133,11 @@ export class ToolsMenuComponent {
                 }
 
                 const content = await response.text();
-                this.ingestContent(rawFilename, content);
+                await this.ingestionService.ingest([{
+                    filename: rawFilename,
+                    data: content,
+                }]);
+                console.log(`[Site Observer] Successfully imported from URL: ${rawFilename}`);
             } catch (error: unknown) {
                 console.error("[Site Observer] Failed to import from URL:", error);
                 alert(error instanceof Error ? error.message : "Failed to import from URL. Check console for details.");

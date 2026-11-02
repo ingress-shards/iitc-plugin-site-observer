@@ -136,7 +136,7 @@ export class TooltipComponent {
         $card.removeClass("bg-res bg-enl width-goals width-links").addClass("width-wave visible").data("trigger", trigger);
 
         const shards = (waveState.statistics?.shards?.moving ?? 0) + (waveState.statistics?.shards?.nonMoving ?? 0);
-        const targets = waveState.statistics?.targetsCount ?? 0;
+        const targets = waveState.statistics?.targets ?? 0;
 
         const jumpGroupSize = siteConfig.timeline.jumpGroupSize ?? 1;
         const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
@@ -193,7 +193,7 @@ export class TooltipComponent {
         // 1. Gather all target portals that scored in this wave
         const scoredPortalsSet = new Set<number>();
         for (const w of waveState.shardJumpWindows) {
-            const factionGoals = w.factionBreakdowns?.[faction]?.goals ?? [];
+            const factionGoals = w.goalsBreakdown?.[faction] ?? [];
             for (const g of factionGoals) {
                 scoredPortalsSet.add(g.portalId);
             }
@@ -224,10 +224,10 @@ export class TooltipComponent {
             let rowHtml = `<td class="portal-name ${factionClass}-text" title="${portalName}">${portalName}</td>`;
             for (const group of groups) {
                 const groupGoals = group.windows
-                    .flatMap((w) => w.factionBreakdowns?.[faction]?.goals ?? [])
+                    .flatMap((w) => w.goalsBreakdown?.[faction] ?? [])
                     .filter((g) => g.portalId === portalId);
-                const scoredValue = groupGoals.reduce((sum, g) => sum + g.scoredCount, 0);
-                const unscoredValue = groupGoals.reduce((sum, g) => sum + g.unscoredCount, 0);
+                const scoredValue = groupGoals.reduce((sum, g) => sum + (g.scoredCount ?? 0), 0);
+                const unscoredValue = groupGoals.reduce((sum, g) => sum + (g.unscoredCount ?? 0), 0);
                 const displayValue = scoredValue > 0 || unscoredValue > 0
                     ? (unscoredValue > 0 ? `${scoredValue} (${unscoredValue})` : String(scoredValue))
                     : "-";
@@ -267,7 +267,7 @@ export class TooltipComponent {
         const linkRules: [string, { label: string; points: number; tooltip?: string }][] = [];
         const matchedRuleKeys = new Set<string>();
         for (const w of waveState.shardJumpWindows) {
-            const factionData = w.factionBreakdowns?.[faction]?.links;
+            const factionData = w.linksBreakdown?.[faction];
             if (factionData) {
                 for (const [ruleKey, count] of Object.entries(factionData)) {
                     if (count && count > 0) {
@@ -304,7 +304,7 @@ export class TooltipComponent {
             let rowCellsHtml = "";
 
             for (const group of groups) {
-                const count = group.windows.reduce((sum, w) => sum + (w.factionBreakdowns?.[faction]?.links?.[ruleKey] ?? 0), 0);
+                const count = group.windows.reduce((sum, w) => sum + (w.linksBreakdown?.[faction]?.[ruleKey] ?? 0), 0);
                 totalJumps += count;
                 rowCellsHtml += `<td>${count > 0 ? count : "-"}</td>`;
             }
@@ -319,11 +319,11 @@ export class TooltipComponent {
             `;
         }
 
-        const hasMismatches = waveState.shardJumpWindows.some((w) => (w.factionBreakdowns?.[faction]?.linkAlignmentMismatches ?? 0) > 0);
+        const hasMismatches = waveState.shardJumpWindows.some((w) => (w.diagnostics?.linkAlignmentMismatches?.[faction] ?? 0) > 0);
         if (hasMismatches) {
             let mismatchRowCells = "";
             for (const group of groups) {
-                const count = group.windows.reduce((sum, w) => sum + (w.factionBreakdowns?.[faction]?.linkAlignmentMismatches ?? 0), 0);
+                const count = group.windows.reduce((sum, w) => sum + (w.diagnostics?.linkAlignmentMismatches?.[faction] ?? 0), 0);
                 mismatchRowCells += `<td>${count > 0 ? count : "-"}</td>`;
             }
 

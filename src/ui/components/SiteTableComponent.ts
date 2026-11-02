@@ -8,7 +8,7 @@ import {
     TACTICAL_MARKER_SVG,
     UI_COLORS,
     calculateBoundingBoxDimensions,
-    FACTION_COLORS,
+    ALIGNMENT_COLORS,
     parseZonedDateTime,
     roundToDecimalPlaces
 } from "@ingress-shards/ingress-events-core";
@@ -171,12 +171,10 @@ export class SiteTableComponent {
                           )
                         : 0;
                     const portals = siteRecord?.observations?.portals ? Object.values(siteRecord.observations.portals) : [];
-                    hasOrnaments = siteRecord?.analysis?.hasPreEventOrnaments ?? portals.some((p) => p.history?.some((h) => h.type === "pre-event"));
+                    const preEventPortals = portals.filter((p) => p.history?.some((h) => h.type === "pre-event"));
+                    hasOrnaments = preEventPortals.length > 0;
 
                     ({ sitePhase, timeRemaining } = this.getSiteStatus(site, actualShards, hasOrnaments));
-
-                    const preEventPortals = portals.filter((p) => p.history?.some((h) => h.type === "pre-event"));
-
                     if (preEventPortals.length > 1) {
                         const dimensions = calculateBoundingBoxDimensions(preEventPortals);
                         playboxHtml = `<div class="site-dimensions">Playbox: ${preEventPortals.length} portals, ${(dimensions.width / 1000).toFixed(1)}km x ${(dimensions.height / 1000).toFixed(1)}km</div>`;
@@ -193,9 +191,9 @@ export class SiteTableComponent {
                 if([SitePhase.Active, SitePhase.Processing, SitePhase.Complete].includes(sitePhase)) {
                     let ptsENL = 0;
                     let ptsRES = 0;
-                    if (siteRecord?.analysis?.seasonPoints) {
-                        ptsENL = siteRecord.analysis.seasonPoints.points?.ENL ?? 0;
-                        ptsRES = siteRecord.analysis.seasonPoints.points?.RES ?? 0;
+                    if (siteRecord?.analysis?.seasonPointsResult) {
+                        ptsENL = siteRecord.analysis.seasonPointsResult.points?.ENL ?? 0;
+                        ptsRES = siteRecord.analysis.seasonPointsResult.points?.RES ?? 0;
                     } else if (siteRecord?.analysis?.waves) {
                         for (const wave of Object.values(siteRecord.analysis.waves)) {
                             ptsENL += wave.points?.total?.ENL ?? 0;
@@ -204,9 +202,9 @@ export class SiteTableComponent {
                     }
 
                     scoreSummaryHtml = (
-                        `<span style="color: ${FACTION_COLORS.ENL};">ENL: ${formatPoints(ptsENL)}</span>` +
+                        `<span style="color: ${ALIGNMENT_COLORS.ENL};">ENL: ${formatPoints(ptsENL)}</span>` +
                         ` / ` +
-                        `<span style="color: ${FACTION_COLORS.RES};">RES: ${formatPoints(ptsRES)}</span>`
+                        `<span style="color: ${ALIGNMENT_COLORS.RES};">RES: ${formatPoints(ptsRES)}</span>`
                     );
                 }
 

@@ -74,4 +74,16 @@ The plugin implements a **Strategy Pattern** for data exports to ensure flexibil
 
 ---
 
+## 7. Future Architecture & Core Migration
+
+### View Model Decoupling for UI Components
+When migrating `ScoringTableComponent` and `TooltipComponent` into `ingress-events-core`, decouple data transformation logic from HTML rendering using a **View Model** architecture:
+
+- **Pure View Models**: Define typed, presentation-ready data contracts (e.g., `ScoringTableViewModel`, `WaveTooltipViewModel`).
+- **Headless Transformation Functions**: Implement pure mapping functions (e.g., `buildScoringTableViewModel(config, record)`) in core that handle aggregation, jump grouping, contributing wave detection, and points formatting without DOM or HTML dependencies.
+- **Thin Presentation Adapters**: UI components in consumer applications (such as IITC plugins or web apps) act purely as template renderers consuming these view models.
+- **Resilient Testing**: Component and business logic unit tests assert against typed view model objects, insulating tests against layout, CSS, and HTML template changes.
+
+---
+
 _This document is a living artifact and will be updated as the architecture and scope of the plugin evolve._

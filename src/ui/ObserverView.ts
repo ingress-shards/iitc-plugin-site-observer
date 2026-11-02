@@ -11,6 +11,7 @@ import { SiteRecordManager } from "../db/SiteRecordManager";
 import { SiteTableComponent, type DateOptionGroup } from "./components/SiteTableComponent";
 import { ToolsMenuComponent } from "./components/ToolsMenuComponent";
 import { ObserverScheduler } from "../ObserverScheduler";
+import type { IntelIngestionService } from "../IntelIngestionService";
 
 export interface ViewState {
     selectedDate?: string;
@@ -39,6 +40,7 @@ export class ObserverView {
         private registry: EventConfigRegistry,
         private dataManager: SiteRecordManager,
         private scheduler: ObserverScheduler,
+        private ingestionService: IntelIngestionService,
     ) {
         this.siteTableComponent = new SiteTableComponent(
             this.dataManager,
@@ -46,7 +48,11 @@ export class ObserverView {
             this.handleSiteSelected.bind(this),
             this.handleSiteToggled.bind(this)
         );
-        this.toolsMenuComponent = new ToolsMenuComponent(this.dataManager, () => this.viewState.selectedSiteId);
+        this.toolsMenuComponent = new ToolsMenuComponent(
+            this.dataManager,
+            this.ingestionService,
+            () => this.viewState.selectedSiteId
+        );
         this.viewState = {
             openSites: {},
         };

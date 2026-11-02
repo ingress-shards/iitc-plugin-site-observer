@@ -1,18 +1,14 @@
-import type { ShardJumpCapture, MapSnapshot, SiteTargetPortals } from "@ingress-shards/ingress-events-core";
+import type { ShardJumpCapture, MapSnapshot } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand, ObserverResult } from "./types/ObserverEvents";
 import type { ShardObserver } from "./observers/ShardObserver";
-import type { ShardJumpIngestionService } from "./services/ShardJumpIngestionService";
-import type { PreEventOrnamentIngestionService } from "./services/PreEventOrnamentIngestionService";
-import type { SiteTargetPortalIngestionService } from "./services/SiteTargetPortalIngestionService";
+import type { IntelIngestionService } from "./IntelIngestionService";
 
 export class EventCoordinator {
     private ingestionQueue: Promise<void> = Promise.resolve();
 
     constructor(
         private shardObserver: ShardObserver,
-        private shardJumpIngestionService: ShardJumpIngestionService,
-        private preEventOrnamentIngestionService: PreEventOrnamentIngestionService,
-        private siteTargetPortalIngestionService: SiteTargetPortalIngestionService
+        private intelIngestionService: IntelIngestionService
     ) {}
 
     public bindEvents(): void {
@@ -25,9 +21,13 @@ export class EventCoordinator {
             const task = async () => {
                 await this.ingestionQueue;
                 try {
-                    await this.shardJumpIngestionService.ingest(customEvent.detail);
+                    const timestamp = customEvent.detail.timestamp ?? Date.now();
+                    await this.intelIngestionService.ingest([{
+                        filename: `shard-jump-times-${timestamp}.json`,
+                        data: customEvent.detail,
+                    }]);
                 } catch (error) {
-                    console.error(`[Site Observer: EventCoordinator] Failed to ingest shard jumps:`, error);
+                    console.error("[Site Observer: EventCoordinator] Failed to ingest shard jumps:", error);
                 }
             };
             this.ingestionQueue = task();
@@ -38,22 +38,13 @@ export class EventCoordinator {
             const task = async () => {
                 await this.ingestionQueue;
                 try {
-                    await this.preEventOrnamentIngestionService.ingest(customEvent.detail);
+                    const timestamp = customEvent.detail.timestamp ?? Date.now();
+                    await this.intelIngestionService.ingest([{
+                        filename: `map-snapshot-${timestamp}.json`,
+                        data: customEvent.detail,
+                    }]);
                 } catch (error) {
-                    console.error(`[Site Observer: EventCoordinator] Failed to ingest pre-event ornaments:`, error);
-                }
-            };
-            this.ingestionQueue = task();
-        });
-
-        window.addEventListener(ObserverResult.SITE_TARGETS_OBSERVED, (event: Event) => {
-            const customEvent = event as CustomEvent<SiteTargetPortals>;
-            const task = async () => {
-                await this.ingestionQueue;
-                try {
-                    await this.siteTargetPortalIngestionService.ingest(customEvent.detail);
-                } catch (error) {
-                    console.error(`[Site Observer: EventCoordinator] Failed to ingest target portals:`, error);
+                    console.error("[Site Observer: EventCoordinator] Failed to ingest pre-event ornaments:", error);
                 }
             };
             this.ingestionQueue = task();

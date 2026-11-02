@@ -86,9 +86,9 @@ export class ScoringTableComponent {
         let totalPointsResistance: number;
         let pointsLabel = "SEASON POINTS";
 
-        if (analysis.seasonPoints) {
-            totalPointsEnlightened = analysis.seasonPoints.points?.ENL ?? 0;
-            totalPointsResistance = analysis.seasonPoints.points?.RES ?? 0;
+        if (analysis.seasonPointsResult) {
+            totalPointsEnlightened = analysis.seasonPointsResult.points?.ENL ?? 0;
+            totalPointsResistance = analysis.seasonPointsResult.points?.RES ?? 0;
         } else {
             pointsLabel = "POINTS";
             totalPointsEnlightened = wavePointsList.reduce((sum, w) => sum + w.totalEnlightened, 0);
@@ -96,8 +96,8 @@ export class ScoringTableComponent {
         }
 
         const hasGoals = (siteConfig.timeline.targets?.length ?? 0) > 0;
-        const contributingResistanceWaves = analysis.seasonPoints?.contributingWaves?.RES ?? [];
-        const contributingEnlightenedWaves = analysis.seasonPoints?.contributingWaves?.ENL ?? [];
+        const contributingResistanceWaves = analysis.seasonPointsResult?.contributingWaves?.RES ?? [];
+        const contributingEnlightenedWaves = analysis.seasonPointsResult?.contributingWaves?.ENL ?? [];
 
         const rowsHtml = wavePointsList.map(wl => {
             const isResistanceContributor = contributingResistanceWaves.includes(wl.wave);

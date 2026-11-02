@@ -7,7 +7,6 @@ import {
     EventConfigRegistry,
     getOrnamentIdsByTag,
     type EventBlueprints,
-    type Ornament,
     type SeasonGeocode,
     type SeasonManifest,
 } from "@ingress-shards/ingress-events-core";
@@ -25,9 +24,7 @@ import { TooltipComponent } from "./ui/components/TooltipComponent";
 import { ShortcutControlComponent } from "./ui/components/ShortcutControlComponent";
 import { EventCoordinator } from "./EventCoordinator";
 import { UITrigger } from "./types/ObserverEvents";
-import { ShardJumpIngestionService } from "./services/ShardJumpIngestionService";
-import { PreEventOrnamentIngestionService } from "./services/PreEventOrnamentIngestionService";
-import { SiteTargetPortalIngestionService } from "./services/SiteTargetPortalIngestionService";
+import { IntelIngestionService } from "./IntelIngestionService";
 
 interface AndroidBridge {
     addPane: (id: string, label: string, icon?: string) => void;
@@ -52,9 +49,7 @@ class SiteObserver implements Plugin.Class {
     private shardObserver!: ShardObserver;
     private preEventOrnamentObserver!: PreEventOrnamentObserver;
 
-    private shardJumpIngestionService!: ShardJumpIngestionService;
-    private preEventOrnamentIngestionService!: PreEventOrnamentIngestionService;
-    private siteTargetPortalIngestionService!: SiteTargetPortalIngestionService;
+    private intelIngestionService!: IntelIngestionService;
 
     private eventCoordinator!: EventCoordinator;
     private view!: ObserverView;
@@ -77,16 +72,7 @@ class SiteObserver implements Plugin.Class {
             getOrnamentIdsByTag(this.eventConfigRegistry.blueprints, "pre-event")
         );
 
-        this.shardJumpIngestionService = new ShardJumpIngestionService(
-            this.eventConfigRegistry,
-            this.siteRecordManager,
-        );
-        this.preEventOrnamentIngestionService = new PreEventOrnamentIngestionService(
-            eventBlueprints.ornaments as Record<string, Ornament>,
-            this.eventConfigRegistry,
-            this.siteRecordManager,
-        );
-        this.siteTargetPortalIngestionService = new SiteTargetPortalIngestionService(
+        this.intelIngestionService = new IntelIngestionService(
             this.eventConfigRegistry,
             this.siteRecordManager,
         );
@@ -95,12 +81,15 @@ class SiteObserver implements Plugin.Class {
 
         this.eventCoordinator = new EventCoordinator(
             this.shardObserver,
-            this.shardJumpIngestionService,
-            this.preEventOrnamentIngestionService,
-            this.siteTargetPortalIngestionService
+            this.intelIngestionService,
         );
 
-        this.view = new ObserverView(this.eventConfigRegistry, this.siteRecordManager, this.observerScheduler);
+        this.view = new ObserverView(
+            this.eventConfigRegistry,
+            this.siteRecordManager,
+            this.observerScheduler,
+            this.intelIngestionService,
+        );
         this.tooltipComponent = new TooltipComponent(this.eventConfigRegistry);
     }
 

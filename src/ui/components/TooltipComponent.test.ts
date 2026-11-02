@@ -97,7 +97,8 @@ describe("TooltipComponent", () => {
                     mechanics: {
                         shards: {
                             scoring: {
-                                linkRules: ["default_jump"]
+                                linkRules: ["default_jump"],
+                                goalRules: ["target_goal"]
                             }
                         }
                     }
@@ -108,45 +109,39 @@ describe("TooltipComponent", () => {
             linkScoringRules: {
                 default_jump: { label: "Jump", points: 1 }
             },
-            goalScoringRules: {}
+            goalScoringRules: {
+                target_goal: { label: "Target Goal", points: 5 }
+            }
         }
     } as unknown as EventConfigRegistry;
 
     const mockWaveState: WaveState = {
-        points: { total: {}, links: {} },
+        points: {},
         statistics: {
             shards: { moving: 2, nonMoving: 0 },
-            targetsCount: 1,
+            targets: 1,
             paths: 1,
-            links: 2,
-            linkAlignmentMismatch: 0
+            links: 2
         },
         shardJumpWindows: [
             {
                 jumpNumber: 1,
                 timestamp: 1777723200000,
                 historyCount: 3,
-                points: { RES: 0, ENL: 0 },
-                factionBreakdowns: {
-                    RES: {
-                        goals: [],
-                        links: { default_jump: 2 }
-                    }
+                points: { total: { RES: 2 } },
+                linksBreakdown: {
+                    RES: { default_jump: 2 }
                 }
             },
             {
                 jumpNumber: 2,
                 timestamp: 1777723500000,
-                historyCount: 4,
-                points: { RES: 0, ENL: 0 },
-                factionBreakdowns: {}
+                historyCount: 4
             },
             {
                 jumpNumber: 3,
                 timestamp: 1777723800000,
-                historyCount: 2,
-                points: { RES: 0, ENL: 0 },
-                factionBreakdowns: {}
+                historyCount: 2
             }
         ]
     };
@@ -187,5 +182,59 @@ describe("TooltipComponent", () => {
         expect(mockCardClasses.has("width-links")).toBe(true);
         expect(mockCardClasses.has("bg-res")).toBe(true);
         expect(mockCardHtml).toContain("Jump");
+    });
+
+    it("renders goal tooltip handling capped portals where scoredCount is omitted in later jump windows", () => {
+        const component = new TooltipComponent(mockRegistry);
+        const config = createSiteConfig(1);
+
+        const goalWaveState: WaveState = {
+            points: {
+                total: { RES: 5 },
+                goals: { RES: 5 }
+            },
+            statistics: {
+                shards: { moving: 2, nonMoving: 0 },
+                targets: 1,
+                paths: 1,
+                links: 2
+            },
+            shardJumpWindows: [
+                {
+                    jumpNumber: 1,
+                    timestamp: 1777723200000,
+                    historyCount: 1,
+                    points: { total: { RES: 5 } },
+                    goalsBreakdown: {
+                        RES: [{ portalId: 10, scoredCount: 1 }]
+                    }
+                },
+                {
+                    jumpNumber: 2,
+                    timestamp: 1777723500000,
+                    historyCount: 1,
+                    goalsBreakdown: {
+                        RES: [{ portalId: 10, unscoredCount: 1 }]
+                    }
+                }
+            ]
+        };
+
+        const recordWithPortal: SiteRecord = {
+            metadata: { siteId: "site-london", seasonId: "2026-test", lastUpdated: 1000 },
+            observations: {
+                portals: {
+                    10: { title: "Tower Bridge", latE6: 51500000, lngE6: -100000 }
+                }
+            }
+        };
+
+        component.showGoalTooltip(1, goalWaveState, "RES", config, recordWithPortal, dummyTrigger);
+
+        expect(mockCardClasses.has("width-goals")).toBe(true);
+        expect(mockCardClasses.has("bg-res")).toBe(true);
+        expect(mockCardHtml).toContain("Tower Bridge");
+        expect(mockCardHtml).toContain("<td>1</td>");
+        expect(mockCardHtml).toContain("<td>0 (1)</td>");
     });
 });
