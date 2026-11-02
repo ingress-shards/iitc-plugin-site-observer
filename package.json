@@ -16,15 +16,17 @@
   "private": true,
   "scripts": {
     "build": "yarn build:dev",
+    "build:all": "concurrently \"yarn build:dev\" \"yarn build:prod\"",
     "build:dev": "webpack --config webpack.dev.js",
     "build:prod": "webpack --config webpack.prod.js",
     "start": "yarn ipk fileserver",
     "autobuild": "webpack --watch --config webpack.dev.js",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
-    "lint": "eslint src",
+    "lint": "eslint src --cache --cache-location node_modules/.cache/eslint",
     "analyze": "webpack --config webpack.prod.js --env analyze",
     "test": "vitest run",
-    "validate": "yarn clean && tsc --noEmit && yarn lint && yarn build:dev && yarn build:prod && yarn test",
+    "validate:check": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"yarn lint\" \"yarn test\"",
+    "validate": "yarn clean && yarn validate:check && yarn build:all",
     "validate:docker": "node scripts/validate.js"
   },
   "dependencies": {
@@ -36,6 +38,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@semantic-release/exec": "^7.1.0",
+    "@swc/core": "^1.16.21",
     "@types/node": "^26.6.4",
     "concurrently": "^10.0.5",
     "conventional-changelog-conventionalcommits": "~9.3.1",

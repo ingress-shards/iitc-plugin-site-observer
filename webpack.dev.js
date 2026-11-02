@@ -1,5 +1,4 @@
 import path from 'node:path';
-import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
 import { merge } from 'webpack-merge';
@@ -14,6 +13,18 @@ const alias = {
     '@ingress-shards/ingress-events-core/conf/recent/season_manifest.json': '@ingress-shards/ingress-events-core/conf/season_manifest.json',
     '@ingress-shards/ingress-events-core/conf/recent/season_geocode.json': '@ingress-shards/ingress-events-core/conf/season_geocode.json',
 };
+
+const tsRule = baseDevConfig.module?.rules?.find(
+    (rule) => rule && (rule.use === 'ts-loader' || (typeof rule.loader === 'string' && rule.loader.includes('ts-loader')))
+);
+if (tsRule) {
+    tsRule.use = {
+        loader: 'ts-loader',
+        options: {
+            transpileOnly: true,
+        },
+    };
+}
 
 export default merge(baseDevConfig, {
     context: path.resolve(__dirname),
@@ -37,6 +48,7 @@ export default merge(baseDevConfig, {
             {
                 test: /\.js$/,
                 enforce: "pre",
+                exclude: /node_modules\/(?!@ingress-shards)/,
                 use: ["source-map-loader"],
             },
         ],

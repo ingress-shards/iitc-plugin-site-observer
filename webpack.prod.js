@@ -10,6 +10,24 @@ import pluginJson from './plugin.json' with { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const tsRule = baseProdConfig.module?.rules?.find(
+    (rule) => rule && (rule.use === 'ts-loader' || (typeof rule.loader === 'string' && rule.loader.includes('ts-loader')))
+);
+if (tsRule) {
+    tsRule.use = {
+        loader: 'ts-loader',
+        options: {
+            transpileOnly: true,
+        },
+    };
+}
+
+const terserInstance = baseProdConfig.optimization?.minimizer?.[0];
+if (terserInstance?.constructor?.swcMinify) {
+    terserInstance.options.minify = terserInstance.constructor.swcMinify;
+    terserInstance.options.extractComments = false;
+}
+
 export default (env = {}) => merge(baseProdConfig, {
     context: path.resolve(__dirname),
     resolve: {
