@@ -37,6 +37,14 @@ jobs:
             - run: corepack enable
             - run: yarn install --immutable && yarn info
 
+            - name: Cache Webpack
+              uses: actions/cache@v4
+              with:
+                  path: node_modules/.cache
+                  key: ${{ runner.os }}-webpack-${{ hashFiles('yarn.lock', 'src/**') }}
+                  restore-keys: |
+                      ${{ runner.os }}-webpack-
+
             - name: Validate project
               run: yarn validate
 
