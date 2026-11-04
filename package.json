@@ -26,8 +26,8 @@
     "analyze": "webpack --config webpack.prod.js --env analyze",
     "test": "vitest run",
     "validate:check": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"yarn lint\" \"yarn test\"",
-    "validate": "yarn clean && yarn validate:check && yarn build:all",
-    "validate:docker": "node scripts/validate.js"
+    "validate": "yarn clean && yarn validate:check && yarn build:all"
+
   },
   "dependencies": {
     "@ingress-shards/ingress-events-core": "0.8.3",
