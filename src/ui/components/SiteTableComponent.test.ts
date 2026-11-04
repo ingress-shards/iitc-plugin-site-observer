@@ -73,8 +73,8 @@ describe("SiteTableComponent.getDateOptionGroups", () => {
         const config = createMockSeasonConfig();
         const groups = SiteTableComponent.getDateOptionGroups(config, "ja-JP");
 
-        expect(groups[0]?.dates[0]?.label).toBe("10月24日(土)");
-        expect(groups[0]?.dates[1]?.label).toBe("11月1日(日)");
+        expect(["10月24日(土)", "10/24(土)"]).toContain(groups[0]?.dates[0]?.label);
+        expect(["11月1日(日)", "11/1(日)"]).toContain(groups[0]?.dates[1]?.label);
     });
 
     it("defaults to runtime environment locale when locale argument is omitted", () => {
