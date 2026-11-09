@@ -27,13 +27,12 @@ export class ScoringTableComponent {
 
         const waves = siteConfig.timeline?.shards || [];
         
-        // If the first wave has no shards yet, do not render the table
+        // If the first wave has no shard jump windows yet, do not render the table
         if (waves.length > 0) {
             const firstWave = waves[0];
             if (firstWave) {
                 const firstWaveState = analysis.waves[firstWave.waveNumber];
-                const firstWaveShards = (firstWaveState?.statistics?.shards?.moving ?? 0) + (firstWaveState?.statistics?.shards?.nonMoving ?? 0);
-                if (firstWaveShards === 0) {
+                if (!firstWaveState || firstWaveState.shardJumpWindows.length === 0) {
                     return "";
                 }
             }
@@ -53,9 +52,8 @@ export class ScoringTableComponent {
         for (const wave of waves) {
             const waveState = analysis.waves[wave.waveNumber];
             
-            // If the total number of shards for a wave (both moving and non moving) is 0, do not render the wave
-            const shardCount = (waveState?.statistics?.shards?.moving ?? 0) + (waveState?.statistics?.shards?.nonMoving ?? 0);
-            if (shardCount === 0) {
+            // If the wave has no shard jump windows observed, do not render the wave
+            if (!waveState || waveState.shardJumpWindows.length === 0) {
                 continue;
             }
 

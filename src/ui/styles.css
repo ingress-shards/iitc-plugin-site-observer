@@ -650,7 +650,7 @@ button.observer-button.warning-button {
 .scoring-tooltip-popover.bg-enl { background: #0c2a20 !important; border-color: #03dc03 !important; }
 
 /* Custom popover widths by type */
-.scoring-tooltip-popover.width-wave { min-width: 150px; max-width: 190px; }
+.scoring-tooltip-popover.width-wave { min-width: 160px; max-width: 280px; }
 .scoring-tooltip-popover.width-goals { min-width: 300px; }
 .scoring-tooltip-popover.width-links { min-width: 340px; }
 
@@ -714,12 +714,14 @@ span.inline-time {
     white-space: nowrap;
     text-align: left !important;
 }
-.mismatch-row {
+.mismatch-row,
+.mismatch-cell {
     background: rgba(255, 193, 7, 0.12) !important;
     color: #ffc107 !important;
     font-weight: bold;
 }
-.mismatch-row td {
+.mismatch-row td,
+td.mismatch-cell {
     color: #ffc107 !important;
 }
 

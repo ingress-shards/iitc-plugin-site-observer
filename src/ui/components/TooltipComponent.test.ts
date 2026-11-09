@@ -117,17 +117,12 @@ describe("TooltipComponent", () => {
 
     const mockWaveState: WaveState = {
         points: {},
-        statistics: {
-            shards: { moving: 2, nonMoving: 0 },
-            targets: 1,
-            paths: 1,
-            links: 2
-        },
         shardJumpWindows: [
             {
                 jumpNumber: 1,
-                timestamp: 1777723200000,
-                historyCount: 3,
+                scheduledStart: 1777723200000,
+                actualEnd: 1777723275000,
+                actionCount: 6,
                 points: { total: { RES: 2 } },
                 linksBreakdown: {
                     RES: { default_jump: 2 }
@@ -135,21 +130,29 @@ describe("TooltipComponent", () => {
             },
             {
                 jumpNumber: 2,
-                timestamp: 1777723500000,
-                historyCount: 4
+                scheduledStart: 1777723500000,
+                actualEnd: 1777723525000,
+                actionCount: 4
             },
             {
                 jumpNumber: 3,
-                timestamp: 1777723800000,
-                historyCount: 2
+                scheduledStart: 1777723800000,
+                actualEnd: 1777723800000,
+                actionCount: 2
             }
-        ]
+        ],
+        statistics: {
+            shards: { moving: 5, nonMoving: 0 },
+            links: 5,
+            paths: 3,
+            targets: 4
+        }
     };
 
     const mockSiteRecord = {} as SiteRecord;
     const dummyTrigger = {} as HTMLElement;
 
-    it("renders wave tooltip grouping jump windows by jumpGroupSize", () => {
+    it("renders wave tooltip grouping jump windows by jumpGroupSize without Duration column when grouped", () => {
         const component = new TooltipComponent(mockRegistry);
         const configGroupSize3 = createSiteConfig(3);
 
@@ -158,11 +161,12 @@ describe("TooltipComponent", () => {
         // With jumpGroupSize = 3, windows 1-3 should be merged into "J1-3"
         expect(mockCardHtml).toContain("J1-3");
         expect(mockCardHtml).toContain("Wave 1 Summary");
-        expect(mockCardHtml).toContain("Shards: 2");
+        expect(mockCardHtml).toContain("Shards: 5");
+        expect(mockCardHtml).not.toContain("<th>Duration</th>");
         expect(mockCardClasses.has("width-wave")).toBe(true);
     });
 
-    it("renders wave tooltip with individual windows when jumpGroupSize is 1", () => {
+    it("renders wave tooltip with Duration column when individual window has > 3 actions and highlights duration > 1m", () => {
         const component = new TooltipComponent(mockRegistry);
         const configGroupSize1 = createSiteConfig(1);
 
@@ -171,17 +175,72 @@ describe("TooltipComponent", () => {
         expect(mockCardHtml).toContain("J1");
         expect(mockCardHtml).toContain("J2");
         expect(mockCardHtml).toContain("J3");
+
+        // Verify column headers: Jump, Actions, Duration in order
+        const jumpIndex = mockCardHtml.indexOf("<th>Jump</th>");
+        const actionsIndex = mockCardHtml.indexOf("<th>Actions</th>");
+        const durationIndex = mockCardHtml.indexOf("<th>Duration</th>");
+        expect(jumpIndex).toBeGreaterThan(-1);
+        expect(actionsIndex).toBeGreaterThan(jumpIndex);
+        expect(durationIndex).toBeGreaterThan(actionsIndex);
+
+        // Window 1 has 6 actions (> 3) and diff of 75s (> 1m), so it has mismatch-cell highlight
+        expect(mockCardHtml).toContain('<td class="mismatch-cell">1m 15s</td>');
+        // Window 2 has 4 actions (> 3) and diff of 25s (<= 1m), so normal cell
+        expect(mockCardHtml).toContain("<td>25s</td>");
+        // Window 3 has 2 actions (<= 3) so duration is "-"
+        expect(mockCardHtml).toContain("<td>-</td>");
     });
 
-    it("renders link tooltip correctly with faction colors", () => {
+    it("omits Duration column when all individual windows have 3 or fewer actions", () => {
+        const component = new TooltipComponent(mockRegistry);
+        const configGroupSize1 = createSiteConfig(1);
+
+        const lowActionWaveState: WaveState = {
+            ...mockWaveState,
+            shardJumpWindows: [
+                {
+                    jumpNumber: 1,
+                    scheduledStart: 1777723200000,
+                    actualEnd: 1777723225000,
+                    actionCount: 3
+                },
+                {
+                    jumpNumber: 2,
+                    scheduledStart: 1777723500000,
+                    actualEnd: 1777723500000,
+                    actionCount: 2
+                }
+            ]
+        };
+
+        component.showWaveTooltip(1, lowActionWaveState, configGroupSize1, mockSiteRecord, dummyTrigger);
+
+        expect(mockCardHtml).toContain("<th>Jump</th>");
+        expect(mockCardHtml).toContain("<th>Actions</th>");
+        expect(mockCardHtml).not.toContain("<th>Duration</th>");
+    });
+
+    it("renders link tooltip correctly with faction colors and mismatched links row", () => {
         const component = new TooltipComponent(mockRegistry);
         const config = createSiteConfig(3);
 
-        component.showLinkTooltip(1, mockWaveState, "RES", config, dummyTrigger);
+        const waveWithMismatch: WaveState = {
+            ...mockWaveState,
+            shardJumpWindows: [
+                {
+                    ...mockWaveState.shardJumpWindows[0]!,
+                    mismatchedScoringJumps: { RES: 1 }
+                }
+            ]
+        };
+
+        component.showLinkTooltip(1, waveWithMismatch, "RES", config, dummyTrigger);
 
         expect(mockCardClasses.has("width-links")).toBe(true);
         expect(mockCardClasses.has("bg-res")).toBe(true);
         expect(mockCardHtml).toContain("Jump");
+        expect(mockCardHtml).toContain("Mismatched Jumps");
     });
 
     it("renders goal tooltip handling capped portals where scoredCount is omitted in later jump windows", () => {
@@ -193,17 +252,12 @@ describe("TooltipComponent", () => {
                 total: { RES: 5 },
                 goals: { RES: 5 }
             },
-            statistics: {
-                shards: { moving: 2, nonMoving: 0 },
-                targets: 1,
-                paths: 1,
-                links: 2
-            },
             shardJumpWindows: [
                 {
                     jumpNumber: 1,
-                    timestamp: 1777723200000,
-                    historyCount: 1,
+                    scheduledStart: 1777723200000,
+                    actualEnd: 1777723200000,
+                    actionCount: 1,
                     points: { total: { RES: 5 } },
                     goalsBreakdown: {
                         RES: [{ portalId: 10, scoredCount: 1 }]
@@ -211,8 +265,9 @@ describe("TooltipComponent", () => {
                 },
                 {
                     jumpNumber: 2,
-                    timestamp: 1777723500000,
-                    historyCount: 1,
+                    scheduledStart: 1777723500000,
+                    actualEnd: 1777723500000,
+                    actionCount: 1,
                     goalsBreakdown: {
                         RES: [{ portalId: 10, unscoredCount: 1 }]
                     }

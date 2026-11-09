@@ -1,5 +1,5 @@
 import type { SiteConfig, SiteRecord, WaveState, ShardJumpGroup, EventConfigRegistry } from "@ingress-shards/ingress-events-core";
-import { getShardJumpGroups, formatJumpGroupTime, roundToDecimalPlaces } from "@ingress-shards/ingress-events-core";
+import { getShardJumpGroups, formatJumpGroupTime, formatDuration, roundToDecimalPlaces, STANDARD_JUMP_WINDOW_DURATION_MS } from "@ingress-shards/ingress-events-core";
 import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 
 const pad = (num: number): string => String(num).padStart(2, "0");
@@ -141,14 +141,36 @@ export class TooltipComponent {
         const jumpGroupSize = siteConfig.timeline.jumpGroupSize ?? 1;
         const groups = getShardJumpGroups(waveState.shardJumpWindows, jumpGroupSize);
 
+        const hasDuration = groups.some(
+            (g) => g.windows.length === 1 && (g.windows[0]?.actionCount ?? 0) > 3
+        );
+
         let tableRows = "";
         for (const group of groups) {
             const timeStr = formatGroupTime(group, siteConfig);
-            const totalActions = group.windows.reduce((sum, w) => sum + w.historyCount, 0);
+            const totalActions = group.windows.reduce((sum, w) => sum + w.actionCount, 0);
+
+            let durationCell = "";
+            if (hasDuration) {
+                let durationStr = "-";
+                let isWarning = false;
+                if (group.windows.length === 1 && (group.windows[0]?.actionCount ?? 0) > 3) {
+                    const win = group.windows[0]!;
+                    const diffMs = Math.max(0, win.actualEnd - win.scheduledStart);
+                    const totalSec = Math.floor(diffMs / 1000);
+                    const minutes = Math.floor(totalSec / 60);
+                    const seconds = totalSec % 60;
+                    durationStr = formatDuration({ minutes, seconds }, true);
+                    isWarning = diffMs > STANDARD_JUMP_WINDOW_DURATION_MS;
+                }
+                const cellClass = isWarning ? ' class="mismatch-cell"' : "";
+                durationCell = `\n                    <td${cellClass}>${durationStr}</td>`;
+            }
+
             tableRows += `
                 <tr>
                     <td>${group.label}<span class="inline-time">${timeStr}</span></td>
-                    <td>${totalActions}</td>
+                    <td>${totalActions}</td>${durationCell}
                 </tr>
             `;
         }
@@ -171,7 +193,7 @@ export class TooltipComponent {
                 <thead>
                     <tr>
                         <th>Jump</th>
-                        <th>Actions</th>
+                        <th>Actions</th>${hasDuration ? "\n                        <th>Duration</th>" : ""}
                     </tr>
                 </thead>
                 <tbody>
@@ -319,17 +341,17 @@ export class TooltipComponent {
             `;
         }
 
-        const hasMismatches = waveState.shardJumpWindows.some((w) => (w.diagnostics?.linkAlignmentMismatches?.[faction] ?? 0) > 0);
+        const hasMismatches = waveState.shardJumpWindows.some((w) => (w.mismatchedScoringJumps?.[faction] ?? 0) > 0);
         if (hasMismatches) {
             let mismatchRowCells = "";
             for (const group of groups) {
-                const count = group.windows.reduce((sum, w) => sum + (w.diagnostics?.linkAlignmentMismatches?.[faction] ?? 0), 0);
+                const count = group.windows.reduce((sum, w) => sum + (w.mismatchedScoringJumps?.[faction] ?? 0), 0);
                 mismatchRowCells += `<td>${count > 0 ? count : "-"}</td>`;
             }
 
             tableRows += `
                 <tr class="mismatch-row">
-                    <td>Link Alignment Mismatch</td>
+                    <td>Mismatched Jumps</td>
                     ${mismatchRowCells}
                     <td>-</td>
                 </tr>
@@ -355,4 +377,3 @@ export class TooltipComponent {
         this.$jqCard?.removeClass("visible").data("trigger", undefined);
     }
 }
-
