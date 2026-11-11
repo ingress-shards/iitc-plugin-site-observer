@@ -1,4 +1,4 @@
-import type { SiteConfig, SiteRecord, WaveState, ShardJumpGroup, EventConfigRegistry } from "@ingress-shards/ingress-events-core";
+import type { SiteConfig, SiteState, WaveState, ShardJumpGroup, ConfigRegistry } from "@ingress-shards/ingress-events-core";
 import { getShardJumpGroups, formatJumpGroupTime, formatDuration, roundToDecimalPlaces, STANDARD_JUMP_WINDOW_DURATION_MS } from "@ingress-shards/ingress-events-core";
 import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 
@@ -27,7 +27,7 @@ const getJQuery = (): JQueryStatic => {
 export class TooltipComponent {
     private $jqCard?: JQuery;
 
-    constructor(private registry: EventConfigRegistry) {}
+    constructor(private registry: ConfigRegistry) {}
 
     private getCard(): JQuery {
         if (!this.$jqCard) {
@@ -39,7 +39,7 @@ export class TooltipComponent {
 
     public bindEvents(
         getSiteConfig: (siteId: string) => SiteConfig | undefined,
-        getSiteRecord: (siteId: string) => Promise<SiteRecord | undefined>
+        getSiteState: (siteId: string) => Promise<SiteState | undefined>
     ): void {
         const jq = getJQuery();
         const showTooltip = async (target: HTMLElement, eventJQuery: JQuery.TriggeredEvent) => {
@@ -51,16 +51,16 @@ export class TooltipComponent {
 
             const faction = $target.attr("data-faction") as "ENL" | "RES";
             const siteConfig = getSiteConfig(siteId);
-            const siteRecord = await getSiteRecord(siteId);
-            if (!siteConfig || !siteRecord?.analysis) return;
+            const siteState = await getSiteState(siteId);
+            if (!siteConfig || !siteState?.analysis) return;
 
-            const waveState = siteRecord.analysis.waves[waveNum];
+            const waveState = siteState.analysis.waves[waveNum];
             if (!waveState) return;
 
             if ($target.hasClass("tooltip-trigger-wave")) {
-                this.showWaveTooltip(waveNum, waveState, siteConfig, siteRecord, target);
+                this.showWaveTooltip(waveNum, waveState, siteConfig, siteState, target);
             } else if ($target.hasClass("tooltip-trigger-goals")) {
-                this.showGoalTooltip(waveNum, waveState, faction, siteConfig, siteRecord, target);
+                this.showGoalTooltip(waveNum, waveState, faction, siteConfig, siteState, target);
             } else if ($target.hasClass("tooltip-trigger-links")) {
                 this.showLinkTooltip(waveNum, waveState, faction, siteConfig, target);
             }
@@ -131,7 +131,7 @@ export class TooltipComponent {
         $card.css({ left, top });
     }
 
-    public showWaveTooltip(waveNum: number, waveState: WaveState, siteConfig: SiteConfig, siteRecord: SiteRecord, trigger: HTMLElement): void {
+    public showWaveTooltip(waveNum: number, waveState: WaveState, siteConfig: SiteConfig, siteState: SiteState, trigger: HTMLElement): void {
         const $card = this.getCard();
         $card.removeClass("bg-res bg-enl width-goals width-links").addClass("width-wave visible").data("trigger", trigger);
 
@@ -204,7 +204,7 @@ export class TooltipComponent {
         $card.html(htmlContent);
     }
 
-    public showGoalTooltip(waveNum: number, waveState: WaveState, faction: "ENL" | "RES", siteConfig: SiteConfig, siteRecord: SiteRecord, trigger: HTMLElement): void {
+    public showGoalTooltip(waveNum: number, waveState: WaveState, faction: "ENL" | "RES", siteConfig: SiteConfig, siteState: SiteState, trigger: HTMLElement): void {
         const $card = this.getCard();
         const factionClass = faction.toLowerCase();
         $card.removeClass("bg-res bg-enl width-wave width-links").addClass(`width-goals bg-${factionClass} visible`).data("trigger", trigger);
@@ -223,8 +223,8 @@ export class TooltipComponent {
 
         // 2. Build header jump group columns
         const season = this.registry.getSeasonMetadata(siteConfig.seasonId);
-        const component = season?.components.find((c) => c.eventType === siteConfig.geocode.eventType);
-        const goalRuleKeys = component?.mechanics.shards?.scoring?.goalRules ?? [];
+        const seasonEvent = season?.events.find((event) => event.eventType === siteConfig.geocode.eventType);
+        const goalRuleKeys = seasonEvent?.mechanics.shards?.scoring?.goalRules ?? [];
         const goalRules = goalRuleKeys.map((k: string) => this.registry.blueprints.goalScoringRules?.[k]).filter(Boolean);
         let pointsLabel = "";
         if (goalRules.length === 1) {
@@ -241,7 +241,7 @@ export class TooltipComponent {
         // 3. Build rows for each target portal
         let tableRows = "";
         for (const portalId of scoredPortalsSet) {
-            const portalName = siteRecord.observations?.portals?.[portalId]?.title ?? `Portal ${portalId}`;
+            const portalName = siteState.telemetry?.portals?.[portalId]?.title ?? `Portal ${portalId}`;
 
             let rowHtml = `<td class="portal-name ${factionClass}-text" title="${portalName}">${portalName}</td>`;
             for (const group of groups) {
@@ -299,8 +299,8 @@ export class TooltipComponent {
             }
         }
         const season = this.registry.getSeasonMetadata(siteConfig.seasonId);
-        const component = season?.components.find((c) => c.eventType === siteConfig.geocode.eventType);
-        const linkRuleKeys = component?.mechanics.shards?.scoring?.linkRules ?? [];
+        const seasonEvent = season?.events.find((event) => event.eventType === siteConfig.geocode.eventType);
+        const linkRuleKeys = seasonEvent?.mechanics.shards?.scoring?.linkRules ?? [];
         for (const key of matchedRuleKeys) {
             const rule = scoringRules[key];
             if (rule && linkRuleKeys.includes(key)) {

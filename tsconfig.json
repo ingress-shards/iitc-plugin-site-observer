@@ -2,7 +2,7 @@
     "compilerOptions": {
         "module": "ES2022",
         "target": "ES2022",
-        "lib": ["ES2022", "dom"],
+        "lib": ["ES2022", "dom", "dom.iterable"],
         "rootDir": "./src",
         "outDir": "dist/",
         "moduleResolution": "Bundler",

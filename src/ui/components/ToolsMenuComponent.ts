@@ -9,10 +9,10 @@ import {
     type IngestionItem,
 } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand, UITrigger } from "../../types/ObserverEvents";
-import type { SiteRecordManager } from "../../db/SiteRecordManager";
+import type { SiteStateManager } from "../../db/SiteStateManager";
 import type { IntelIngestionService } from "../../IntelIngestionService";
 import { DataExporter } from "../../export/SiteDataExporter";
-import { SiteRecordStrategy } from "../../export/SiteRecordExporter";
+import { SiteStateStrategy } from "../../export/SiteStateExporter";
 import { SiteDiscoveryStrategy } from "../../export/SiteDiscoveryExporter";
 import { SiteTargetPortalStrategy } from "../../export/SiteTargetPortalExporter";
 
@@ -21,7 +21,7 @@ export class ToolsMenuComponent {
     private dataExporter: DataExporter;
 
     constructor(
-        private dataManager: SiteRecordManager,
+        private dataManager: SiteStateManager,
         private ingestionService: IntelIngestionService,
         private getSelectedSiteId: () => string | undefined
     ) {
@@ -36,7 +36,7 @@ export class ToolsMenuComponent {
                     <span class="selected-site">Selected Site: <strong id="selected-site-name"></strong></span>
                     
                     <div class="export-tools-menu">
-                        <button class="export-site-record-button" title="Export Site Record">
+                        <button class="export-site-state-button" title="Export Site Data">
                             ${EXPORT_ICON_SVG}
                         </button>
                         <button class="export-ornaments-button" title="Export Pre-Event Ornaments">
@@ -94,8 +94,7 @@ export class ToolsMenuComponent {
             const input = event.target as HTMLInputElement;
             if (!input.files || input.files.length === 0) return;
             
-            // eslint-disable-next-line unicorn/prefer-spread
-            const files = Array.from(input.files);
+            const files = [...input.files];
             input.value = ""; // Reset input so same files can be selected again if needed
 
             try {
@@ -145,24 +144,24 @@ export class ToolsMenuComponent {
         });
 
         $container.on("click", "#clear-all-data-button", async () => {
-            if (confirm("Are you sure you want to clear ALL site records from the local database?")) {
+            if (confirm("Are you sure you want to clear ALL site data from the local database?")) {
                 try {
                     await this.dataManager.clearAll();
-                    console.log("[Site Observer] All site records cleared from database.");
+                    console.log("[Site Observer] All site states cleared from database.");
                     window.dispatchEvent(new CustomEvent(UITrigger.SIGNAL_DATA_UPDATE));
                 } catch (error) {
-                    console.error("[Site Observer] Failed to clear site records:", error);
+                    console.error("[Site Observer] Failed to clear site states:", error);
                 }
             }
         });
 
-        $container.on("click", ".export-site-record-button", async () => {
+        $container.on("click", ".export-site-state-button", async () => {
             const selectedSiteId = this.getSelectedSiteId();
             if (!selectedSiteId) return;
             try {
-                await this.dataExporter.run(selectedSiteId, SiteRecordStrategy);
+                await this.dataExporter.run(selectedSiteId, SiteStateStrategy);
             } catch (error) {
-                console.error(`[Site Observer: ActionMenu] Failed to export site data:`, error);
+                console.error(`[Site Observer: ActionMenu] Failed to export site state:`, error);
             }
         });
 
@@ -189,10 +188,10 @@ export class ToolsMenuComponent {
         $container.on("click", ".clear-site-data-button", async () => {
             const selectedSiteId = this.getSelectedSiteId();
             if (!selectedSiteId) return;
-            if (confirm(`Are you sure you want to clear the site record for ${selectedSiteId}?`)) {
+            if (confirm(`Are you sure you want to clear the site data for ${selectedSiteId}?`)) {
                 try {
                     await this.dataManager.delete(selectedSiteId);
-                    console.log(`[Site Observer] Site record for ${selectedSiteId} cleared.`);
+                    console.log(`[Site Observer] Site state for ${selectedSiteId} cleared.`);
                     window.dispatchEvent(new CustomEvent(UITrigger.SIGNAL_DATA_UPDATE));
                 } catch (error) {
                     console.error(`[Site Observer] Failed to clear site data for ${selectedSiteId}:`, error);

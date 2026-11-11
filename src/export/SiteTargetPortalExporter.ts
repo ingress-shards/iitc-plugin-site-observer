@@ -14,15 +14,15 @@ import { type ExportStrategy } from "./SiteDataExporter";
 export const SiteTargetPortalStrategy: ExportStrategy<SiteTargetPortals> = {
     prefix: "target-portals",
 
-    getData: async (siteId, siteRecordManager) => {
+    getData: async (siteId, siteStateManager) => {
         try {
-            const siteRecord = await siteRecordManager.get(siteId);
-            if (!siteRecord?.observations) {
+            const siteState = await siteStateManager.get(siteId);
+            if (!siteState?.telemetry) {
                 console.log(`[Site Observer: Site Target Portal Strategy] No discovery data found for site ${siteId}`);
                 return;
             }
 
-            const portals = Object.values(siteRecord.observations.portals ?? {});
+            const portals = Object.values(siteState.telemetry.portals ?? {});
             const targetPortals = portals.filter((p) => p.history?.some((h) => h.type === "target"));
 
             if (targetPortals.length === 0) {

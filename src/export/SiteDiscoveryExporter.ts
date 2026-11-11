@@ -9,15 +9,15 @@ import { type ExportStrategy } from "./SiteDataExporter";
 export const SiteDiscoveryStrategy: ExportStrategy<SiteDiscovery> = {
     prefix: "ornamented-portals",
 
-    getData: async (siteId, siteRecordManager) => {
+    getData: async (siteId, siteStateManager) => {
         try {
-            const siteRecord = await siteRecordManager.get(siteId);
-            if (!siteRecord?.observations) {
+            const siteState = await siteStateManager.get(siteId);
+            if (!siteState?.telemetry) {
                 console.log(`[Site Observer: Site Discovery Strategy] No discovery data found for site ${siteId}`);
                 return;
             }
 
-            const portals: PortalDiscovery[] = Object.values(siteRecord.observations.portals ?? {})
+            const portals: PortalDiscovery[] = Object.values(siteState.telemetry.portals ?? {})
                 .filter((p) => p.history?.some((h) => h.type === "pre-event"))
                 .map((p) => {
                     const preEventEntry = p.history!.find((h): h is PreEventHistoryEntry => h.type === "pre-event")!;

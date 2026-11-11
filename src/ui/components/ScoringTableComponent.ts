@@ -1,4 +1,4 @@
-import { roundToDecimalPlaces, type SiteConfig, type SiteRecord } from "@ingress-shards/ingress-events-core";
+import { roundToDecimalPlaces, type SiteConfig, type SiteState } from "@ingress-shards/ingress-events-core";
 
 const formatPoints = (value: number) => roundToDecimalPlaces(value, 1).toString();
 
@@ -19,8 +19,8 @@ const renderCell = (
 };
 
 export class ScoringTableComponent {
-    public render(siteConfig: SiteConfig, siteRecord?: SiteRecord): string {
-        const analysis = siteRecord?.analysis;
+    public render(siteConfig: SiteConfig, siteState?: SiteState): string {
+        const analysis = siteState?.analysis;
         if (!analysis) {
             return "";
         }

@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { SiteTableComponent } from "./SiteTableComponent.js";
 import {
-    EventConfigRegistry,
+    ConfigRegistry,
     type EventBlueprints,
     type SeasonGeocode,
     type SeasonManifest,
 } from "@ingress-shards/ingress-events-core";
 
-const createMockRegistry = (): EventConfigRegistry => {
-    return new EventConfigRegistry(
+const createMockRegistry = (): ConfigRegistry => {
+    return new ConfigRegistry(
         {
             events: { ANOMALY: { label: "Anomaly" } },
             ornaments: {},
@@ -23,7 +23,7 @@ const createMockRegistry = (): EventConfigRegistry => {
                     year: 2026,
                     name: "Cygnus",
                     overviewUrl: "",
-                    components: [
+                    events: [
                         { eventType: "ANOMALY", startTime: "14:00", mechanics: {} }
                     ]
                 }

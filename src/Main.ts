@@ -4,14 +4,14 @@ import seasonManifest from "@ingress-shards/ingress-events-core/conf/recent/seas
 import seasonGeocode from "@ingress-shards/ingress-events-core/conf/recent/season_geocode.json";
 
 import {
-    EventConfigRegistry,
+    ConfigRegistry,
     getOrnamentIdsByTag,
     type EventBlueprints,
     type SeasonGeocode,
     type SeasonManifest,
 } from "@ingress-shards/ingress-events-core";
 
-import { SiteRecordManager } from "./db/SiteRecordManager";
+import { SiteStateManager } from "./db/SiteStateManager";
 import { ShardJumpDataManager } from "./db/ShardJumpDataManager";
 import { ObserverScheduler } from "./ObserverScheduler";
 import { ShardObserver } from "./observers/ShardObserver";
@@ -39,9 +39,9 @@ interface IITCWindow {
 }
 
 class SiteObserver implements Plugin.Class {
-    private eventConfigRegistry!: EventConfigRegistry;
+    private configRegistry!: ConfigRegistry;
 
-    private siteRecordManager!: SiteRecordManager;
+    private siteStateManager!: SiteStateManager;
     private shardJumpDataManager!: ShardJumpDataManager;
 
     private observerScheduler!: ObserverScheduler;
@@ -58,26 +58,26 @@ class SiteObserver implements Plugin.Class {
     private shortcutControl?: ShortcutControlComponent;
 
     private initializeServices(): void {
-        this.eventConfigRegistry = new EventConfigRegistry(
+        this.configRegistry = new ConfigRegistry(
             eventBlueprints as EventBlueprints,
             seasonManifest as SeasonManifest,
             seasonGeocode as SeasonGeocode
         );
 
-        this.siteRecordManager = new SiteRecordManager();
+        this.siteStateManager = new SiteStateManager();
         this.shardJumpDataManager = new ShardJumpDataManager();
 
         this.shardObserver = new ShardObserver(this.shardJumpDataManager);
         this.preEventOrnamentObserver = new PreEventOrnamentObserver(
-            getOrnamentIdsByTag(this.eventConfigRegistry.blueprints, "pre-event")
+            getOrnamentIdsByTag(this.configRegistry.blueprints, "pre-event")
         );
 
         this.intelIngestionService = new IntelIngestionService(
-            this.eventConfigRegistry,
-            this.siteRecordManager,
+            this.configRegistry,
+            this.siteStateManager,
         );
 
-        this.observerScheduler = new ObserverScheduler(this.eventConfigRegistry.getAllSites());
+        this.observerScheduler = new ObserverScheduler(this.configRegistry.getAllSites());
 
         this.eventCoordinator = new EventCoordinator(
             this.shardObserver,
@@ -85,12 +85,12 @@ class SiteObserver implements Plugin.Class {
         );
 
         this.view = new ObserverView(
-            this.eventConfigRegistry,
-            this.siteRecordManager,
+            this.configRegistry,
+            this.siteStateManager,
             this.observerScheduler,
             this.intelIngestionService,
         );
-        this.tooltipComponent = new TooltipComponent(this.eventConfigRegistry);
+        this.tooltipComponent = new TooltipComponent(this.configRegistry);
     }
 
     private initializeUI(): void {
@@ -107,8 +107,8 @@ class SiteObserver implements Plugin.Class {
         }
 
         this.tooltipComponent.bindEvents(
-            (id) => this.eventConfigRegistry.getSiteConfig(id),
-            (id) => this.siteRecordManager.get(id)
+            (id) => this.configRegistry.getSiteConfig(id),
+            (id) => this.siteStateManager.get(id)
         );
     }
 

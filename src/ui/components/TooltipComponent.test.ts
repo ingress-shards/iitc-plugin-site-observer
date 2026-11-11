@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TooltipComponent } from "./TooltipComponent.js";
-import type { SiteConfig, SiteRecord, WaveState, EventConfigRegistry } from "@ingress-shards/ingress-events-core";
+import type { SiteConfig, SiteState, WaveState, ConfigRegistry } from "@ingress-shards/ingress-events-core";
 
 const createSiteConfig = (jumpGroupSize?: number): SiteConfig => ({
     seasonId: "2026-test",
@@ -91,7 +91,7 @@ describe("TooltipComponent", () => {
             id: "2026-test",
             name: "Test Season",
             year: 2026,
-            components: [
+            events: [
                 {
                     eventType: "ANOMALY",
                     mechanics: {
@@ -113,7 +113,7 @@ describe("TooltipComponent", () => {
                 target_goal: { label: "Target Goal", points: 5 }
             }
         }
-    } as unknown as EventConfigRegistry;
+    } as unknown as ConfigRegistry;
 
     const mockWaveState: WaveState = {
         points: {},
@@ -149,14 +149,14 @@ describe("TooltipComponent", () => {
         }
     };
 
-    const mockSiteRecord = {} as SiteRecord;
+    const mockSiteState = {} as SiteState;
     const dummyTrigger = {} as HTMLElement;
 
     it("renders wave tooltip grouping jump windows by jumpGroupSize without Duration column when grouped", () => {
         const component = new TooltipComponent(mockRegistry);
         const configGroupSize3 = createSiteConfig(3);
 
-        component.showWaveTooltip(1, mockWaveState, configGroupSize3, mockSiteRecord, dummyTrigger);
+        component.showWaveTooltip(1, mockWaveState, configGroupSize3, mockSiteState, dummyTrigger);
 
         // With jumpGroupSize = 3, windows 1-3 should be merged into "J1-3"
         expect(mockCardHtml).toContain("J1-3");
@@ -170,7 +170,7 @@ describe("TooltipComponent", () => {
         const component = new TooltipComponent(mockRegistry);
         const configGroupSize1 = createSiteConfig(1);
 
-        component.showWaveTooltip(1, mockWaveState, configGroupSize1, mockSiteRecord, dummyTrigger);
+        component.showWaveTooltip(1, mockWaveState, configGroupSize1, mockSiteState, dummyTrigger);
 
         expect(mockCardHtml).toContain("J1");
         expect(mockCardHtml).toContain("J2");
@@ -214,7 +214,7 @@ describe("TooltipComponent", () => {
             ]
         };
 
-        component.showWaveTooltip(1, lowActionWaveState, configGroupSize1, mockSiteRecord, dummyTrigger);
+        component.showWaveTooltip(1, lowActionWaveState, configGroupSize1, mockSiteState, dummyTrigger);
 
         expect(mockCardHtml).toContain("<th>Jump</th>");
         expect(mockCardHtml).toContain("<th>Actions</th>");
@@ -275,16 +275,16 @@ describe("TooltipComponent", () => {
             ]
         };
 
-        const recordWithPortal: SiteRecord = {
+        const stateWithPortal: SiteState = {
             metadata: { siteId: "site-london", seasonId: "2026-test", lastUpdated: 1000 },
-            observations: {
+            telemetry: {
                 portals: {
                     10: { title: "Tower Bridge", latE6: 51500000, lngE6: -100000 }
                 }
             }
         };
 
-        component.showGoalTooltip(1, goalWaveState, "RES", config, recordWithPortal, dummyTrigger);
+        component.showGoalTooltip(1, goalWaveState, "RES", config, stateWithPortal, dummyTrigger);
 
         expect(mockCardClasses.has("width-goals")).toBe(true);
         expect(mockCardClasses.has("bg-res")).toBe(true);

@@ -12,8 +12,8 @@ import {
     parseZonedDateTime,
     roundToDecimalPlaces
 } from "@ingress-shards/ingress-events-core";
-import type { SiteConfig, SiteRecord, EventConfigRegistry } from "@ingress-shards/ingress-events-core";
-import { SiteRecordManager } from "../../db/SiteRecordManager";
+import type { SiteConfig, SiteState, ConfigRegistry } from "@ingress-shards/ingress-events-core";
+import { SiteStateManager } from "../../db/SiteStateManager";
 import { ScoringTableComponent } from "./ScoringTableComponent";
 import type { ViewState } from "../ObserverView.js";
 import type { Temporal } from "temporal-polyfill";
@@ -43,7 +43,7 @@ export class SiteTableComponent {
     }
 
     public static getDateOptionGroups(
-        registry: EventConfigRegistry,
+        registry: ConfigRegistry,
         locales?: string | string[]
     ): DateOptionGroup[] {
         const groups: DateOptionGroup[] = [];
@@ -94,8 +94,8 @@ export class SiteTableComponent {
     private scoringTableComponent = new ScoringTableComponent();
 
     constructor(
-        private dataManager: SiteRecordManager,
-        private registry: EventConfigRegistry,
+        private dataManager: SiteStateManager,
+        private registry: ConfigRegistry,
         private onSiteSelected: (siteId: string) => void,
         private onSiteToggled: (siteId: string, isOpen: boolean) => void
     ) {}
@@ -161,16 +161,16 @@ export class SiteTableComponent {
                 let hasOrnaments = false;
                 let playboxHtml = "";
 
-                let siteRecord: SiteRecord | undefined;
+                let siteState: SiteState | undefined;
                 try {
-                    siteRecord = await this.dataManager.get(site.geocode.id);
+                    siteState = await this.dataManager.get(site.geocode.id);
 
-                    actualShards = siteRecord?.observations?.shards
-                        ? Object.values(siteRecord.observations.shards).reduce((accumulator, shard) => 
+                    actualShards = siteState?.telemetry?.shards
+                        ? Object.values(siteState.telemetry.shards).reduce((accumulator, shard) => 
                             accumulator + (shard.history?.filter((h) => h.action === "spawn").length || 0), 0
                           )
                         : 0;
-                    const portals = siteRecord?.observations?.portals ? Object.values(siteRecord.observations.portals) : [];
+                    const portals = siteState?.telemetry?.portals ? Object.values(siteState.telemetry.portals) : [];
                     const preEventPortals = portals.filter((p) => p.history?.some((h) => h.type === "pre-event"));
                     hasOrnaments = preEventPortals.length > 0;
 
@@ -181,7 +181,7 @@ export class SiteTableComponent {
                     }
                 } catch (error) {
                     console.error(
-                        `[Site Observer: Table Renderer] Failed to retrieve site record for ${site.geocode.id}:`,
+                        `[Site Observer: Table Renderer] Failed to retrieve site state for ${site.geocode.id}:`,
                         error,
                     );
                     ({ sitePhase, timeRemaining } = this.getSiteStatus(site));
@@ -191,11 +191,11 @@ export class SiteTableComponent {
                 if([SitePhase.Active, SitePhase.Processing, SitePhase.Complete].includes(sitePhase)) {
                     let ptsENL = 0;
                     let ptsRES = 0;
-                    if (siteRecord?.analysis?.seasonPointsResult) {
-                        ptsENL = siteRecord.analysis.seasonPointsResult.points?.ENL ?? 0;
-                        ptsRES = siteRecord.analysis.seasonPointsResult.points?.RES ?? 0;
-                    } else if (siteRecord?.analysis?.waves) {
-                        for (const wave of Object.values(siteRecord.analysis.waves)) {
+                    if (siteState?.analysis?.seasonPointsResult) {
+                        ptsENL = siteState.analysis.seasonPointsResult.points?.ENL ?? 0;
+                        ptsRES = siteState.analysis.seasonPointsResult.points?.RES ?? 0;
+                    } else if (siteState?.analysis?.waves) {
+                        for (const wave of Object.values(siteState.analysis.waves)) {
                             ptsENL += wave.points?.total?.ENL ?? 0;
                             ptsRES += wave.points?.total?.RES ?? 0;
                         }
@@ -230,7 +230,7 @@ export class SiteTableComponent {
                         <div class="site-row-body">
                             <div class="site-row-body-inner">
                                 ${playboxHtml}
-                                ${this.scoringTableComponent.render(site, siteRecord)}
+                                ${this.scoringTableComponent.render(site, siteState)}
                             </div>
                         </div>
                     </div>
@@ -306,14 +306,14 @@ export class SiteTableComponent {
                 let lngE6 = selectedSite.geocode.lngE6;
 
                 try {
-                    const siteRecord = await this.dataManager.get(siteId);
-                    const centroid = siteRecord?.analysis?.centroid;
+                    const siteState = await this.dataManager.get(siteId);
+                    const centroid = siteState?.analysis?.centroid;
                     if (centroid) {
                         latE6 = centroid.latE6;
                         lngE6 = centroid.lngE6;
                     }
                 } catch (error) {
-                    console.error(`[Site Observer: SiteTableComponent] Failed to retrieve site record for centroid:`, error);
+                    console.error(`[Site Observer: SiteTableComponent] Failed to retrieve site state for centroid:`, error);
                 }
 
                 if (win.map) {

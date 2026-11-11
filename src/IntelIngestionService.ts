@@ -1,31 +1,31 @@
 import {
     DataIngestionPipeline,
     type IngestionItem,
-    type EventConfigRegistry,
+    type ConfigRegistry,
 } from "@ingress-shards/ingress-events-core";
-import type { SiteRecordManager } from "./db/SiteRecordManager";
+import type { SiteStateManager } from "./db/SiteStateManager";
 import { UITrigger } from "./types/ObserverEvents";
 
 export class IntelIngestionService {
     private pipeline: DataIngestionPipeline;
 
     constructor(
-        private registry: EventConfigRegistry,
-        private siteRecordManager: SiteRecordManager,
+        private registry: ConfigRegistry,
+        private siteStateManager: SiteStateManager,
     ) {
         this.pipeline = new DataIngestionPipeline(
             this.registry,
             this.registry.getAllSites(),
-            (siteId: string) => this.siteRecordManager.get(siteId),
+            (siteId: string) => this.siteStateManager.get(siteId),
         );
     }
 
     public async ingest(items: IngestionItem[]): Promise<void> {
         try {
-            const updatedRecords = await this.pipeline.ingestBatch(items);
+            const updatedStates = await this.pipeline.ingestBatch(items);
             let hasAnyUpdate = false;
-            for (const record of updatedRecords) {
-                await this.siteRecordManager.store(record);
+            for (const state of updatedStates) {
+                await this.siteStateManager.store(state);
                 hasAnyUpdate = true;
             }
             if (hasAnyUpdate) {

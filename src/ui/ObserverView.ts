@@ -2,12 +2,12 @@ import { zonedDateTimeISO, instant } from "temporal-polyfill/fns/Now";
 import { diff as diffZonedDateTime } from "temporal-polyfill/fns/ZonedDateTime";
 import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 import {
-    type EventConfigRegistry,
+    type ConfigRegistry,
     type SiteConfig,
     formatDuration,
 } from "@ingress-shards/ingress-events-core";
 import { UITrigger } from "../types/ObserverEvents";
-import { SiteRecordManager } from "../db/SiteRecordManager";
+import { SiteStateManager } from "../db/SiteStateManager";
 import { SiteTableComponent, type DateOptionGroup } from "./components/SiteTableComponent";
 import { ToolsMenuComponent } from "./components/ToolsMenuComponent";
 import { ObserverScheduler } from "../ObserverScheduler";
@@ -37,8 +37,8 @@ export class ObserverView {
     private dataUpdateListener = () => { void this.updateSiteTable(); };
 
     constructor(
-        private registry: EventConfigRegistry,
-        private dataManager: SiteRecordManager,
+        private registry: ConfigRegistry,
+        private dataManager: SiteStateManager,
         private scheduler: ObserverScheduler,
         private ingestionService: IntelIngestionService,
     ) {

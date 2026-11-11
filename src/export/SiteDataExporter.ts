@@ -1,5 +1,5 @@
 import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
-import { SiteRecordManager } from "../db/SiteRecordManager";
+import { SiteStateManager } from "../db/SiteStateManager";
 import { formatTimestamp } from "@ingress-shards/ingress-events-core";
 
 /**
@@ -14,7 +14,7 @@ export interface ExportStrategy<T> {
     /**
      * Logic to retrieve and format the data for export.
      */
-    getData(siteId: string, siteRecordManager: SiteRecordManager): Promise<T | undefined>;
+    getData(siteId: string, siteStateManager: SiteStateManager): Promise<T | undefined>;
 }
 
 interface AndroidBridge {
@@ -29,7 +29,7 @@ interface IITCWindow {
  * Concrete class that orchestrates the export process using a provided strategy.
  */
 export class DataExporter {
-    constructor(private siteRecordManager: SiteRecordManager) {}
+    constructor(private siteStateManager: SiteStateManager) {}
 
     private getTimestamp(): string {
         return formatTimestamp(zonedDateTimeISO());
@@ -60,7 +60,7 @@ export class DataExporter {
      */
     public async run<T>(siteId: string, strategy: ExportStrategy<T>): Promise<void> {
         try {
-            const data = await strategy.getData(siteId, this.siteRecordManager);
+            const data = await strategy.getData(siteId, this.siteStateManager);
             if (!data) return;
 
             const timestamp = this.getTimestamp();
