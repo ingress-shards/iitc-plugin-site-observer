@@ -46,7 +46,7 @@ Expanding a site row reveals the wave-by-wave scoring breakdown, including curre
 
 The next update will be displayed at the bottom of the panel where applicable.
 
-The Tools menu at the bottom allows for the data for a selected site to be exported (Site Record, Pre-Event Ornaments, or Target Portals), or cleared. The shard jump times can also be manually downloaded, or data imported via file or URL, alongside clearing all site data.
+The Tools menu at the bottom allows for the data for a selected site to be exported (All Site Data, Pre-Event Ornaments, or Target Portals), or cleared. The shard jump times can also be manually downloaded, or data imported via file or URL, alongside clearing all site data.
 
 ## Future development
 

@@ -64,7 +64,7 @@ The plugin implements a **Strategy Pattern** for data exports to ensure flexibil
 - **`DataExporter`**: An orchestration class that handles the browser download process, filename generation (timestamped), and async error management.
 - **`ExportStrategy<T>`**: An interface for defining different export formats.
 - **Implementations**:
-    - **`SiteRecordStrategy`**: Exports the raw, comprehensive `SiteRecord` for debugging and full-state archival.
+    - **`SiteStateStrategy`**: Exports the raw, comprehensive `SiteState` for debugging and full-state archival.
     - **`SiteDiscoveryStrategy`**: Exports a curated `SiteDiscovery` object containing only pre-event portal locations and ornament IDs, optimized for the initial discovery phase of the Shard Map.
 
 ### Standard Compliance:
@@ -80,7 +80,7 @@ The plugin implements a **Strategy Pattern** for data exports to ensure flexibil
 When migrating `ScoringTableComponent` and `TooltipComponent` into `ingress-events-core`, decouple data transformation logic from HTML rendering using a **View Model** architecture:
 
 - **Pure View Models**: Define typed, presentation-ready data contracts (e.g., `ScoringTableViewModel`, `WaveTooltipViewModel`).
-- **Headless Transformation Functions**: Implement pure mapping functions (e.g., `buildScoringTableViewModel(config, record)`) in core that handle aggregation, jump grouping, contributing wave detection, and points formatting without DOM or HTML dependencies.
+- **Headless Transformation Functions**: Implement pure mapping functions (e.g., `buildScoringTableViewModel(config, siteState)`) in core that handle aggregation, jump grouping, contributing wave detection, and points formatting without DOM or HTML dependencies.
 - **Thin Presentation Adapters**: UI components in consumer applications (such as IITC plugins or web apps) act purely as template renderers consuming these view models.
 - **Resilient Testing**: Component and business logic unit tests assert against typed view model objects, insulating tests against layout, CSS, and HTML template changes.
 
