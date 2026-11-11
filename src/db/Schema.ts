@@ -1,11 +1,11 @@
 import type { DBSchema } from "idb";
-import type { SiteRecord } from "@ingress-shards/ingress-events-core";
+import type { SiteState } from "@ingress-shards/ingress-events-core";
 import { ACTIVE_STORES } from "./DataBaseManager";
 
 export interface MyDatabaseSchema extends DBSchema {
-    [ACTIVE_STORES.SITE_RECORD]: {
+    [ACTIVE_STORES.SITE_STATE]: {
         key: string;
-        value: SiteRecord;
+        value: SiteState;
     };
     [ACTIVE_STORES.SHARD_JUMP_CAPTURE]: {
         key: string;

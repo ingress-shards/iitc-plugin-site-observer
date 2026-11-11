@@ -1,30 +1,30 @@
-import type { SiteRecord } from "@ingress-shards/ingress-events-core";
+import type { SiteState } from "@ingress-shards/ingress-events-core";
 import { getDatabase, ACTIVE_STORES } from "./DataBaseManager";
 
 /**
- * Manages site data stored locally in IndexedDB.
+ * Manages site state data stored locally in IndexedDB.
  */
-export class SiteRecordManager {
-    private readonly STORE_NAME = ACTIVE_STORES.SITE_RECORD;
+export class SiteStateManager {
+    private readonly STORE_NAME = ACTIVE_STORES.SITE_STATE;
 
     /**
-     * Store site data.
+     * Store site state data.
      */
-    public async store(data: SiteRecord): Promise<void> {
+    public async store(data: SiteState): Promise<void> {
         const database = await getDatabase();
         await database.put(this.STORE_NAME, data, data.metadata.siteId);
     }
 
     /**
-     * Retrieve site data for a specific site.
+     * Retrieve site state data for a specific site.
      */
-    public async get(siteId: string): Promise<SiteRecord | undefined> {
+    public async get(siteId: string): Promise<SiteState | undefined> {
         const database = await getDatabase();
         return database.get(this.STORE_NAME, siteId);
     }
 
     /**
-     * Clear all site records from IndexedDB.
+     * Clear all site states from IndexedDB.
      */
     public async clearAll(): Promise<void> {
         const database = await getDatabase();
