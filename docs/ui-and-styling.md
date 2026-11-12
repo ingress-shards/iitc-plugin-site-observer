@@ -23,5 +23,5 @@ Top-level imports are processed immediately upon script execution. In the IITC M
 
 ## Design Tokens
 The project uses CSS variables for theming, falling back to Ingress-compatible defaults.
-- `--shards-signal-color`: The color used for the data update indicator dot.
-- `--shards-border-color`: Primary border color for tables and dialogs.
+- `--color-signal`: The color used for the data update indicator dot.
+- `--color-border`: Primary border color for tables and dialogs.
