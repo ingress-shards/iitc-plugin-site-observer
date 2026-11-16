@@ -1,6 +1,4 @@
-import { zonedDateTimeISO, instant } from "temporal-polyfill/fns/Now";
-import { diff as diffZonedDateTime } from "temporal-polyfill/fns/ZonedDateTime";
-import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
+import { instant } from "temporal-polyfill/fns/Now";
 import {
     type ConfigRegistry,
     type SiteConfig,
@@ -98,45 +96,23 @@ export class ObserverView {
     }
 
     private updateAlarmCountdown() {
-        const nextAlarm = this.scheduler.getNextAlarm();
         const $label = this.$root?.find(".next-alarm-label");
         if (!$label || $label.length === 0) return;
 
-        if (nextAlarm) {
-            const nowZoned = zonedDateTimeISO(nextAlarm.timeZone);
-            const alarmZoned = toZonedDateTimeISO(
-                fromEpochMilliseconds(nextAlarm.timestamp),
-                nextAlarm.timeZone,
-            );
-            const duration = diffZonedDateTime(nowZoned, alarmZoned, {
-                largestUnit: "day",
-            });
-            $label.text(`next data update in ${formatDuration(duration, true)}`);
-        } else {
+        const nextAlarm = this.scheduler.getNextAlarm();
+        if (!nextAlarm) {
             $label.text("");
+            return;
         }
+        const countdown = formatDuration(instant().epochMilliseconds, nextAlarm.timestamp, "narrow", "seconds");
+        $label.text(`next data update in ${countdown}`);
     }
 
     private buildHtml(): string {
         this.siteConfigsByDate ??= SiteTableComponent.getSiteConfigsByDate(this.registry.getAllSites());
         this.dateOptionGroups ??= SiteTableComponent.getDateOptionGroups(this.registry);
 
-        const nextAlarm = this.scheduler.getNextAlarm();
-        let nextAlarmHtml = "";
-        if (nextAlarm) {
-            const nowZoned = zonedDateTimeISO(nextAlarm.timeZone);
-            const alarmZoned = toZonedDateTimeISO(
-                fromEpochMilliseconds(nextAlarm.timestamp),
-                nextAlarm.timeZone,
-            );
-            const duration = diffZonedDateTime(nowZoned, alarmZoned, {
-                largestUnit: "day",
-            });
-            nextAlarmHtml = `<div class="next-alarm-label">next data update in ${formatDuration(duration, true)}</div>`;
-        }
-
         const toolsMenuHtml = this.toolsMenuComponent.render();
-        const shouldShowFooter = !!(nextAlarmHtml || toolsMenuHtml);
 
         return `
             <section>
@@ -156,14 +132,12 @@ export class ObserverView {
                     </div>
                     <div id="sites-table-container"></div>
                 </main>
-                ${shouldShowFooter ? `
                 <footer class="observer-footer">
                     <div class="observer-footer-content">
-                        ${nextAlarmHtml}
+                        <div class="next-alarm-label"></div>
                         ${toolsMenuHtml}
                     </div>
                 </footer>
-                ` : ""}
             </section>
         `;
     }
@@ -188,6 +162,7 @@ export class ObserverView {
 
         void this.updateSiteTable();
         this.updateSelectedSiteText();
+        this.updateAlarmCountdown();
         this.scheduleNextUpdate();
     }
 

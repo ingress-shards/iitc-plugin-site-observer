@@ -1,5 +1,4 @@
-import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
-import { getEpochSeconds } from "@ingress-shards/ingress-events-core";
+import { instant } from "temporal-polyfill/fns/Now";
 import type {
     SiteTargetPortals,
     ObservedTargetPortalCapture,
@@ -74,7 +73,7 @@ export const SiteTargetPortalStrategy: ExportStrategy<SiteTargetPortals> = {
 
             const result: SiteTargetPortals = {
                 siteId,
-                exportedAt: getEpochSeconds(zonedDateTimeISO()),
+                exportedAt: instant().epochMilliseconds,
                 artifact: artifacts,
             };
 

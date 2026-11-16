@@ -1,6 +1,8 @@
 import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
+import type { Record as ZonedDateTimeRecord } from "temporal-polyfill/fns/ZonedDateTime";
 import { SiteStateManager } from "../db/SiteStateManager";
-import { formatTimestamp } from "@ingress-shards/ingress-events-core";
+
+const pad = (num: number): string => String(num).padStart(2, "0");
 
 /**
  * Interface for data export strategies.
@@ -32,7 +34,8 @@ export class DataExporter {
     constructor(private siteStateManager: SiteStateManager) {}
 
     private getTimestamp(): string {
-        return formatTimestamp(zonedDateTimeISO());
+        const zdt: ZonedDateTimeRecord = zonedDateTimeISO();
+        return `${zdt.year}.${pad(zdt.month)}.${pad(zdt.day)}.${pad(zdt.hour)}.${pad(zdt.minute)}.${pad(zdt.second)}`;
     }
 
     private triggerDownload<T>(filename: string, data: T): void {

@@ -357,6 +357,10 @@
     text-align: center;
 }
 
+.next-alarm-label:empty {
+    display: none;
+}
+
 .scoring-value-clickable {
     position: relative;
     display: inline-block;

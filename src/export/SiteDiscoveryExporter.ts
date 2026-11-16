@@ -1,5 +1,4 @@
-import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
-import { getEpochSeconds } from "@ingress-shards/ingress-events-core";
+import { instant } from "temporal-polyfill/fns/Now";
 import type { SiteDiscovery, PortalDiscovery, PreEventHistoryEntry } from "@ingress-shards/ingress-events-core";
 import { type ExportStrategy } from "./SiteDataExporter";
 
@@ -38,7 +37,7 @@ export const SiteDiscoveryStrategy: ExportStrategy<SiteDiscovery> = {
 
             const discovery: SiteDiscovery = {
                 siteId,
-                exportedAt: getEpochSeconds(zonedDateTimeISO()),
+                exportedAt: instant().epochMilliseconds,
                 portals,
             };
 

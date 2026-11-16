@@ -1,5 +1,4 @@
 import { toString as zdtToString } from "temporal-polyfill/fns/ZonedDateTime";
-import { fromFields as durationFromFields } from "temporal-polyfill/fns/Duration";
 import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
 import { instant } from "temporal-polyfill/fns/Now";
 import { formatDuration, type SiteConfig, type SiteTimeline } from "@ingress-shards/ingress-events-core";
@@ -86,11 +85,11 @@ export class ObserverScheduler {
         const next = this.runQueue[0];
         if (!next) return;
 
-        const delay = Math.max(0, next.timestamp - instant().epochMilliseconds);
-        const duration = durationFromFields({ milliseconds: delay });
+        const nowMs = instant().epochMilliseconds;
+        const delay = Math.max(0, next.timestamp - nowMs);
 
         console.log(
-            `[Site Observer: Scheduler] ${next.siteId} - Next (${next.type}) in ${formatDuration(duration)} (delay ${delay} ms)`,
+            `[Site Observer: Scheduler] ${next.siteId} - Next (${next.type}) in ${formatDuration(nowMs, next.timestamp)} (delay ${delay} ms)`,
         );
 
         this.activeTimer = setTimeout(() => {

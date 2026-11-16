@@ -1,6 +1,6 @@
-import { fromFields } from "temporal-polyfill/fns/Duration";
-import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
-import { diff as diffZonedDateTime, toPlainDate, add as addZoned } from "temporal-polyfill/fns/ZonedDateTime";
+import { instant } from "temporal-polyfill/fns/Now";
+import { fromString as zdtFromString, toPlainDate } from "temporal-polyfill/fns/ZonedDateTime";
+import { getBasic } from "temporal-polyfill/fns/Calendar";
 import { toString as dateToString, createFormat as createPlainDateFormat, type Record as PlainDateRecord } from "temporal-polyfill/fns/PlainDate";
 import {
     SitePhase,
@@ -9,14 +9,12 @@ import {
     UI_COLORS,
     calculateBoundingBoxDimensions,
     ALIGNMENT_COLORS,
-    parseZonedDateTime,
     roundToDecimalPlaces
 } from "@ingress-shards/ingress-events-core";
 import type { SiteConfig, SiteState, ConfigRegistry } from "@ingress-shards/ingress-events-core";
 import { SiteStateManager } from "../../db/SiteStateManager";
 import { ScoringTableComponent } from "./ScoringTableComponent";
 import type { ViewState } from "../ObserverView.js";
-import type { Temporal } from "temporal-polyfill";
 import { UITrigger } from "../../types/ObserverEvents";
 
 const formatPoints = (value: number) => roundToDecimalPlaces(value, 1).toString();
@@ -34,7 +32,7 @@ export class SiteTableComponent {
     public static getSiteConfigsByDate(sites: SiteConfig[]): Record<string, SiteConfig[]> {
         const siteConfigs: Record<string, SiteConfig[]> = {};
         for (const siteConfig of sites) {
-            const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
+            const startDate = zdtFromString(siteConfig.geocode.startTime, getBasic);
             const dateKey = dateToString(toPlainDate(startDate));
             const list = (siteConfigs[dateKey] ??= []);
             list.push(siteConfig);
@@ -59,7 +57,7 @@ export class SiteTableComponent {
             const sites = registry.getSitesForSeason(seasonId);
             const uniqueDatesMap = new Map<string, PlainDateRecord>();
             for (const siteConfig of sites) {
-                const startDate = parseZonedDateTime(siteConfig.geocode.startTime);
+                const startDate = zdtFromString(siteConfig.geocode.startTime, getBasic);
                 const pd = toPlainDate(startDate);
                 const dateKey = dateToString(pd);
                 uniqueDatesMap.set(dateKey, pd);
@@ -100,39 +98,34 @@ export class SiteTableComponent {
         private onSiteToggled: (siteId: string, isOpen: boolean) => void
     ) {}
 
-    private getSiteStatus(siteConfig: SiteConfig, actualShards: number = 0, hasOrnaments: boolean = false): { sitePhase: SitePhase; timeRemaining: Temporal.DurationLikeObject | undefined } {
+    private getSiteStatus(
+        siteConfig: SiteConfig,
+        actualShards: number = 0,
+        hasOrnaments: boolean = false
+    ): { sitePhase: SitePhase; fromMs?: number; toMs?: number } {
         if (!siteConfig) {
-            return { sitePhase: SitePhase.NoData, timeRemaining: undefined };
+            return { sitePhase: SitePhase.NoData };
         }
 
-        const startTimeZoned = parseZonedDateTime(siteConfig.geocode.startTime);
-        const durationMins = siteConfig.timeline.durationMinutes;
-        const endTimeZoned = addZoned(startTimeZoned, fromFields({ minutes: durationMins }));
-        const nowZoned = zonedDateTimeISO(startTimeZoned.timeZoneId);
-
+        const startTimeZoned = zdtFromString(siteConfig.geocode.startTime, getBasic);
         const expectedShards = siteConfig.timeline.shards.reduce((sum, w) => sum + (w.expectedShards ?? 0), 0);
 
         const sitePhase = SiteManager.calculatePhase({
             startTime: startTimeZoned,
-            eventDurationMins: durationMins,
+            eventDurationMins: siteConfig.timeline.durationMinutes,
             shards: { actual: actualShards, expected: expectedShards },
             hasOrnaments,
         });
 
-        let timeRemaining: Temporal.DurationLikeObject | undefined = undefined;
+        const nowMs = instant().epochMilliseconds;
         if ([SitePhase.Scheduled, SitePhase.Discovery, SitePhase.StandBy].includes(sitePhase)) {
-            timeRemaining = diffZonedDateTime(nowZoned, startTimeZoned, {
-                smallestUnit: "minutes",
-                largestUnit: "days",
-            });
-        } else if (sitePhase === SitePhase.Active) {
-            timeRemaining = diffZonedDateTime(nowZoned, endTimeZoned, {
-                smallestUnit: "minutes",
-                largestUnit: "days",
-            });
+            return { sitePhase, fromMs: nowMs, toMs: siteConfig.timeline.start };
+        }
+        if (sitePhase === SitePhase.Active) {
+            return { sitePhase, fromMs: nowMs, toMs: siteConfig.timeline.end };
         }
 
-        return { sitePhase, timeRemaining };
+        return { sitePhase };
     }
 
     public async render(
@@ -155,7 +148,8 @@ export class SiteTableComponent {
             sites.map(async (site) => {
                 const isHighlighted = selectedSiteId === site.geocode.id;
                 let sitePhase: SitePhase;
-                let timeRemaining: Temporal.DurationLike | undefined;
+                let fromMs: number | undefined;
+                let toMs: number | undefined;
 
                 let actualShards = 0;
                 let hasOrnaments = false;
@@ -174,7 +168,7 @@ export class SiteTableComponent {
                     const preEventPortals = portals.filter((p) => p.history?.some((h) => h.type === "pre-event"));
                     hasOrnaments = preEventPortals.length > 0;
 
-                    ({ sitePhase, timeRemaining } = this.getSiteStatus(site, actualShards, hasOrnaments));
+                    ({ sitePhase, fromMs, toMs } = this.getSiteStatus(site, actualShards, hasOrnaments));
                     if (preEventPortals.length > 1) {
                         const dimensions = calculateBoundingBoxDimensions(preEventPortals);
                         playboxHtml = `<div class="site-dimensions">Playbox: ${preEventPortals.length} portals, ${(dimensions.width / 1000).toFixed(1)}km x ${(dimensions.height / 1000).toFixed(1)}km</div>`;
@@ -184,7 +178,7 @@ export class SiteTableComponent {
                         `[Site Observer: Table Renderer] Failed to retrieve site state for ${site.geocode.id}:`,
                         error,
                     );
-                    ({ sitePhase, timeRemaining } = this.getSiteStatus(site));
+                    ({ sitePhase, fromMs, toMs } = this.getSiteStatus(site));
                 }
 
                 let scoreSummaryHtml = '';
@@ -224,7 +218,7 @@ export class SiteTableComponent {
                             </div>
                             <div class="site-header-secondary">
                                 <span class="score-summary-block">${scoreSummaryHtml}</span>
-                                <span class="site-status-badge phase-${phaseKey}">${SiteManager.formatStatus({ phase: sitePhase, timeRemaining })}</span>
+                                <span class="site-status-badge phase-${phaseKey}">${SiteManager.formatStatus({ phase: sitePhase, fromMs, toMs })}</span>
                             </div>
                         </div>
                         <div class="site-row-body">
@@ -268,8 +262,8 @@ export class SiteTableComponent {
                 const hasOrnaments = $row.attr("data-has-ornaments") === "true";
                 
                 if (selectedSite) {
-                    const { sitePhase, timeRemaining } = this.getSiteStatus(selectedSite, actualShards, hasOrnaments);
-                    const statusText = SiteManager.formatStatus({ phase: sitePhase, timeRemaining });
+                    const { sitePhase, fromMs, toMs } = this.getSiteStatus(selectedSite, actualShards, hasOrnaments);
+                    const statusText = SiteManager.formatStatus({ phase: sitePhase, fromMs, toMs });
                     const phaseKey = SitePhase[sitePhase]?.toLowerCase() ?? "unknown";
                     const $badge = $row.find(".site-status-badge");
                     $badge.attr("class", `site-status-badge phase-${phaseKey}`).html(statusText);

@@ -1,13 +1,8 @@
 import type { SiteConfig, SiteState, WaveState, ShardJumpGroup, ConfigRegistry } from "@ingress-shards/ingress-events-core";
-import { getShardJumpGroups, formatJumpGroupTime, formatDuration, roundToDecimalPlaces, STANDARD_JUMP_WINDOW_DURATION_MS } from "@ingress-shards/ingress-events-core";
-import { fromEpochMilliseconds, toZonedDateTimeISO } from "temporal-polyfill/fns/Instant";
-
-const pad = (num: number): string => String(num).padStart(2, "0");
+import { getShardJumpGroups, formatJumpGroupTime, formatDuration, formatTime, roundToDecimalPlaces, STANDARD_JUMP_WINDOW_DURATION_MS } from "@ingress-shards/ingress-events-core";
 
 const formatTickTime = (timestamp: number, siteConfig: SiteConfig): string => {
-    const timeZone = siteConfig.geocode.timeZone ?? "UTC";
-    const zdt = toZonedDateTimeISO(fromEpochMilliseconds(timestamp), timeZone);
-    return `${pad(zdt.hour)}:${pad(zdt.minute)}`;
+    return formatTime(timestamp, siteConfig.geocode.timeZone ?? "UTC");
 };
 
 const formatGroupTime = (group: ShardJumpGroup, siteConfig: SiteConfig): string => {
@@ -157,10 +152,7 @@ export class TooltipComponent {
                 if (group.windows.length === 1 && (group.windows[0]?.actionCount ?? 0) > 3) {
                     const win = group.windows[0]!;
                     const diffMs = Math.max(0, win.actualEnd - win.scheduledStart);
-                    const totalSec = Math.floor(diffMs / 1000);
-                    const minutes = Math.floor(totalSec / 60);
-                    const seconds = totalSec % 60;
-                    durationStr = formatDuration({ minutes, seconds }, true);
+                    durationStr = formatDuration(win.scheduledStart, win.actualEnd, "narrow", "seconds");
                     isWarning = diffMs > STANDARD_JUMP_WINDOW_DURATION_MS;
                 }
                 const cellClass = isWarning ? ' class="mismatch-cell"' : "";
