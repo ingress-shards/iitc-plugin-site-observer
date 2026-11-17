@@ -305,45 +305,6 @@
     justify-content: space-evenly;
 }
 
-/* Scoring Table Styles */
-.scoring-table {
-    border-collapse: collapse;
-    width: 100%;
-    text-align: center;
-    font-size: 0.9rem;
-    border: 1px solid var(--color-border, #444);
-}
-
-.scoring-table th,
-.scoring-table td {
-    border: 1px solid var(--color-border, #444);
-    padding: 5px;
-    vertical-align: middle;
-}
-
-.scoring-table thead th {
-    background: #222;
-    font-weight: bold;
-    color: #eee;
-}
-
-.scoring-table tbody tr.links-total-row {
-    border-top: 1px solid var(--color-border, #555);
-    font-weight: bold;
-}
-
-.faction-enl-bg {
-    background: rgba(3, 220, 3, 0.24) !important;
-}
-
-.faction-res-bg {
-    background: rgba(0, 136, 255, 0.24) !important;
-}
-
-.font-bold {
-    font-weight: bold;
-}
-
 .observer-footer-content {
     width: 100%;
     display: flex;
@@ -359,54 +320,6 @@
 
 .next-alarm-label:empty {
     display: none;
-}
-
-.scoring-value-clickable {
-    position: relative;
-    display: inline-block;
-    cursor: help;
-}
-
-.scoring-value-clickable::after {
-    content: "";
-    position: absolute;
-    top: -2px;
-    right: -4px;
-    width: 4px;
-    height: 4px;
-    background-color: var(--text-muted, #888);
-    border-radius: 50%;
-    opacity: 0.6;
-    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
-}
-
-/* Highlight the dot when cell or text is hovered */
-.scoring-table td:hover .scoring-value-clickable::after,
-.scoring-value-clickable:hover::after {
-    transform: scale(1.5);
-    opacity: 1;
-}
-
-.scoring-table td.faction-res-bg:hover .scoring-value-clickable::after {
-    background-color: var(--color-res, #0088ff);
-}
-
-.scoring-table td.faction-enl-bg:hover .scoring-value-clickable::after {
-    background-color: var(--color-enl, #03dc03);
-}
-
-.scoring-table td:not(.faction-res-bg):not(.faction-enl-bg):hover .scoring-value-clickable::after {
-    background-color: var(--text-primary, #eee);
-}
-
-.scoring-table td.scoring-contributor-res {
-    font-weight: bold !important;
-    box-shadow: inset 0 0 0 1.5px var(--color-res, #0088ff) !important;
-}
-
-.scoring-table td.scoring-contributor-enl {
-    font-weight: bold !important;
-    box-shadow: inset 0 0 0 1.5px var(--color-enl, #03dc03) !important;
 }
 
 /* Site Row Header (Responsive Flex-Wrap Layout) */

@@ -9,11 +9,11 @@ import {
     UI_COLORS,
     calculateBoundingBoxDimensions,
     ALIGNMENT_COLORS,
-    roundToDecimalPlaces
+    roundToDecimalPlaces,
+    renderScoringTable
 } from "@ingress-shards/ingress-events-core";
 import type { SiteConfig, SiteState, ConfigRegistry } from "@ingress-shards/ingress-events-core";
 import { SiteStateManager } from "../../db/SiteStateManager";
-import { ScoringTableComponent } from "./ScoringTableComponent";
 import type { ViewState } from "../ObserverView.js";
 import { UITrigger } from "../../types/ObserverEvents";
 
@@ -88,8 +88,6 @@ export class SiteTableComponent {
 
         return groups;
     }
-
-    private scoringTableComponent = new ScoringTableComponent();
 
     constructor(
         private dataManager: SiteStateManager,
@@ -224,7 +222,7 @@ export class SiteTableComponent {
                         <div class="site-row-body">
                             <div class="site-row-body-inner">
                                 ${playboxHtml}
-                                ${this.scoringTableComponent.render(site, siteState)}
+                                ${renderScoringTable(site, siteState)}
                             </div>
                         </div>
                     </div>

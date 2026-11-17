@@ -52,12 +52,16 @@ export class TooltipComponent {
             const waveState = siteState.analysis.waves[waveNum];
             if (!waveState) return;
 
-            if ($target.hasClass("tooltip-trigger-wave")) {
-                this.showWaveTooltip(waveNum, waveState, siteConfig, siteState, target);
-            } else if ($target.hasClass("tooltip-trigger-goals")) {
-                this.showGoalTooltip(waveNum, waveState, faction, siteConfig, siteState, target);
-            } else if ($target.hasClass("tooltip-trigger-links")) {
-                this.showLinkTooltip(waveNum, waveState, faction, siteConfig, target);
+            switch ($target.attr("data-tooltip-type")) {
+                case "wave":
+                    this.showWaveTooltip(waveNum, waveState, siteConfig, siteState, target);
+                    break;
+                case "goals":
+                    this.showGoalTooltip(waveNum, waveState, faction, siteConfig, siteState, target);
+                    break;
+                case "links":
+                    this.showLinkTooltip(waveNum, waveState, faction, siteConfig, target);
+                    break;
             }
 
             let x = eventJQuery.pageX;
@@ -72,15 +76,15 @@ export class TooltipComponent {
             this.positionTooltip(x, y);
         };
 
-        jq(document).on("mouseenter", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", (eventJQuery) => {
+        jq(document).on("mouseenter", "[data-tooltip-type]", (eventJQuery) => {
             void showTooltip(eventJQuery.currentTarget as HTMLElement, eventJQuery);
         });
 
-        jq(document).on("mouseleave", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", () => {
+        jq(document).on("mouseleave", "[data-tooltip-type]", () => {
             this.hideTooltip();
         });
 
-        jq(document).on("click", ".tooltip-trigger-wave, .tooltip-trigger-goals, .tooltip-trigger-links", (eventJQuery) => {
+        jq(document).on("click", "[data-tooltip-type]", (eventJQuery) => {
             eventJQuery.stopPropagation();
             const target = eventJQuery.currentTarget as HTMLElement;
             const popover = jq(".scoring-tooltip-popover");
