@@ -191,12 +191,21 @@
 }
 
 /* Map Shortcut Button */
+.site-observer-map-control {
+    overflow: visible;
+}
+
 .site-observer-map-control a.leaflet-bar-part {
     overflow: visible !important;
-    /* Prevent clipping of the signal dot */
+    /* Prevent clipping of the button pulse wave */
     display: flex !important;
     justify-content: center;
     align-items: center;
+}
+
+.site-observer-map-control a.leaflet-bar-part.has-data {
+    border-color: var(--color-signal, #ffcc00);
+    animation: site-signal-pulse 1.5s cubic-bezier(0, 0, 0.5, 1) infinite;
 }
 
 .site-observer-icon-wrapper {
@@ -216,40 +225,17 @@
     object-fit: contain;
 }
 
-.site-observer-signal-dot {
-    position: absolute;
-    top: 1px;
-    right: 1px;
-    width: 10px;
-    height: 10px;
-    background-color: var(--color-signal, #f00);
-    border-radius: 50%;
-    border: 1px solid #000;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
-    display: none;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.site-observer-signal-dot.has-data {
-    display: block;
-    animation: site-signal-pulse 1s infinite;
-}
-
 @keyframes site-signal-pulse {
-    0% {
-        transform: scale(1);
-        opacity: 1;
+    from {
+        box-shadow:
+            inset 0 0 0 2px var(--color-signal, #ffcc00),
+            0 0 0 0 rgba(255, 204, 0, 0.95);
     }
 
-    50% {
-        transform: scale(1.2);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(1);
-        opacity: 1;
+    to {
+        box-shadow:
+            inset 0 0 0 2px var(--color-signal, #ffcc00),
+            0 0 0 16px rgba(255, 204, 0, 0);
     }
 }
 

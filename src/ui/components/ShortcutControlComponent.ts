@@ -6,19 +6,25 @@ import siteObserverIcon from "../../images/site-observer-icon.svg";
  * Uses lazy initialization to prevent "Class extends value undefined" errors on mobile.
  */
 export class ShortcutControlComponent {
+    private static readonly SIGNAL_ANIMATION_NAME = "site-signal-pulse";
+    private static readonly SIGNAL_DURATION_MS = 5000;
+
     private controlInstance?: L.Control;
-    private signalDot?: HTMLElement;
+    private controlButton?: HTMLAnchorElement;
+    private signalTimeout?: number;
+    private signalStopListener?: (event: AnimationEvent) => void;
 
     constructor(private host: ObserverHost) {}
 
     private initControl() {
         // Extend L.Control only when L is guaranteed to exist.
-        // We use an arrow function for onAdd to preserve 'this' as the ShortcutControlComponent instance.
+        // We use arrow functions for onAdd/onRemove to preserve 'this' as the ShortcutControlComponent instance.
         const ShortcutLeafletControl = L.Control.extend({
             options: {
                 position: "topleft",
             },
             onAdd: () => this.createControlElement(),
+            onRemove: () => this.clearSignalState(),
         });
 
         const ControlClass = ShortcutLeafletControl as unknown as new () => L.Control;
@@ -36,11 +42,10 @@ export class ShortcutControlComponent {
         button.innerHTML = `
             <div class="site-observer-icon-wrapper">
                 <img src="${siteObserverIcon}" class="site-observer-icon" alt="Site Observer">
-                <div class="site-observer-signal-dot"></div>
             </div>
         `;
 
-        this.signalDot = button.querySelector(".site-observer-signal-dot")!;
+        this.controlButton = button;
 
         L.DomEvent.on(button, "click", (event) => {
             L.DomEvent.stop(event);
@@ -48,6 +53,54 @@ export class ShortcutControlComponent {
         });
 
         return container;
+    }
+
+    private stopSignalAtIterationEnd() {
+        const button = this.controlButton;
+        if (!button?.classList.contains("has-data")) return;
+
+        if (!button.isConnected) {
+            button.classList.remove("has-data");
+            return;
+        }
+
+        const activeAnimations = window
+            .getComputedStyle(button)
+            .animationName.split(",")
+            .map((name) => name.trim());
+
+        if (!activeAnimations.includes(ShortcutControlComponent.SIGNAL_ANIMATION_NAME)) {
+            button.classList.remove("has-data");
+            return;
+        }
+
+        const onAnimationIteration = (event: AnimationEvent) => {
+            if (event.target !== button || event.animationName !== ShortcutControlComponent.SIGNAL_ANIMATION_NAME) {
+                return;
+            }
+            this.clearPendingSignalStop();
+            button.classList.remove("has-data");
+        };
+
+        this.signalStopListener = onAnimationIteration;
+        button.addEventListener("animationiteration", onAnimationIteration);
+    }
+
+    private clearPendingSignalStop() {
+        if (this.signalStopListener && this.controlButton) {
+            this.controlButton.removeEventListener("animationiteration", this.signalStopListener);
+        }
+        this.signalStopListener = undefined;
+    }
+
+    private clearSignalState() {
+        if (this.signalTimeout !== undefined) {
+            window.clearTimeout(this.signalTimeout);
+            this.signalTimeout = undefined;
+        }
+        this.clearPendingSignalStop();
+        this.controlButton?.classList.remove("has-data");
+        this.controlButton = undefined;
     }
 
     /**
@@ -61,15 +114,23 @@ export class ShortcutControlComponent {
     }
 
     /**
-     * Signals that new data has been observed by pulsing the signal dot.
+     * Signals that new data has been observed by pulsing the shortcut button.
+     * When the timeout expires mid-cycle, waits for the active animation iteration
+     * to finish so the pulse stops cleanly at the end of its wave.
      */
     public signalDataUpdate() {
-        if (!this.signalDot) return;
+        if (!this.controlButton) return;
 
-        this.signalDot.classList.add("has-data");
+        if (this.signalTimeout !== undefined) {
+            window.clearTimeout(this.signalTimeout);
+        }
+        this.clearPendingSignalStop();
 
-        window.setTimeout(() => {
-            this.signalDot?.classList.remove("has-data");
-        }, 5000);
+        this.controlButton.classList.add("has-data");
+
+        this.signalTimeout = window.setTimeout(() => {
+            this.signalTimeout = undefined;
+            this.stopSignalAtIterationEnd();
+        }, ShortcutControlComponent.SIGNAL_DURATION_MS);
     }
 }
