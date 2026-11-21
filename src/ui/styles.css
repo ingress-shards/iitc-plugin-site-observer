@@ -72,7 +72,7 @@
 
 #dialog-site-observer section main .ui-label,
 #site-observer.mobile-pane section main .ui-label {
-    font-size: var(--font-size-sm, 0.8rem);
+    font-size: var(--font-size-sm, 0.875rem);
     font-weight: 600;
     color: var(--text-secondary, #bbb);
     letter-spacing: 0.01em;
@@ -120,7 +120,7 @@
     text-align: right;
     border-top: solid 1px var(--color-border, #bbb);
 
-    font-size: var(--font-size-xs, 0.65rem);
+    font-size: var(--font-size-xs, 0.75rem);
     color: var(--text-secondary, #bbb);
     margin: 0;
     padding: 5px;
@@ -168,7 +168,7 @@
 }
 
 .sites-table .site-label {
-    font-size: var(--font-size-md, 0.9rem);
+    font-size: var(--font-size-md, 1rem);
     font-weight: bold;
 }
 
@@ -183,7 +183,7 @@
     text-align: center;
     color: var(--text-secondary, #bbb);
     font-style: italic;
-    font-size: 1rem;
+    font-size: var(--font-size-lg, 1.125rem);
 }
 
 .observer-dialog .hidden {
@@ -313,7 +313,7 @@
 }
 
 .next-alarm-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-sm, 0.875rem);
     color: #aaa;
     text-align: center;
 }
@@ -368,7 +368,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     color: #eee;
-    font-size: 0.85rem;
+    font-size: var(--font-size-md, 1rem);
 }
 
 .site-header-secondary {
@@ -387,7 +387,7 @@
 }
 
 .site-status-badge {
-    font-size: var(--font-size-xs, 0.72rem);
+    font-size: var(--font-size-xs, 0.75rem);
     color: #94A3B8;
     text-align: center;
     white-space: nowrap;
@@ -447,7 +447,7 @@
     width: 35%;
     flex-shrink: 0;
     text-align: center;
-    font-size: var(--font-size-sm, 0.85rem);
+    font-size: var(--font-size-sm, 0.875rem);
     margin: 0 2%;
 }
 
@@ -513,7 +513,7 @@ button.observer-button {
     border: 1px solid #555;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm, 0.875rem);
 }
 
 .tools-menu .site-tools button svg {
@@ -536,117 +536,4 @@ button.observer-button.warning-button {
 #site-observer.mobile-pane button.observer-button.warning-button:hover:not(:disabled) {
     background-color: #700;
     border-color: #a00;
-}
-
-/* Scoring Tooltip Popover Styles */
-.scoring-tooltip-popover {
-    position: absolute;
-    z-index: 20000;
-    background: #141622;
-    border: 1px solid #30364d;
-    color: #c5c9db;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: 6px; /* 6px all around */
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-    box-sizing: border-box;
-    
-    /* Reveal/Dismiss 0.5s transition animation */
-    opacity: 0;
-    transform: scale(0.90);
-    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    visibility: hidden;
-}
-.scoring-tooltip-popover.visible {
-    opacity: 1;
-    transform: scale(1);
-    visibility: visible;
-}
-
-.scoring-tooltip-popover.bg-res { background: #0c203b !important; border-color: #0088ff !important; }
-.scoring-tooltip-popover.bg-enl { background: #0c2a20 !important; border-color: #03dc03 !important; }
-
-/* Custom popover widths by type */
-.scoring-tooltip-popover.width-wave { min-width: 160px; max-width: 280px; }
-.scoring-tooltip-popover.width-goals { min-width: 300px; }
-.scoring-tooltip-popover.width-links { min-width: 340px; }
-
-.scoring-tooltip-popover .popover-header {
-    text-align: center;
-    margin-bottom: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.scoring-tooltip-popover .popover-header strong {
-    color: #ffffff;
-    font-size: 12px;
-}
-.scoring-tooltip-popover .popover-header small {
-    color: #d1d4e0;
-    font-size: 10px;
-}
-.scoring-tooltip-popover .popover-header time {
-    font-size: 9px;
-    opacity: 0.6;
-    color: #a0a5c0;
-}
-
-.tooltip-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-    color: #a0a5c0;
-}
-.tooltip-table th {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 6px 8px;
-    color: #ffffff;
-    font-weight: bold;
-    text-align: center;
-}
-.tooltip-table td {
-    padding: 6px 8px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: #d1d4e0; /* lighter grey for better contrast */
-}
-.tooltip-table th small {
-    display: block;
-    font-size: 9px;
-    opacity: 0.6;
-    font-weight: normal;
-}
-/* Inline time label for wave actions rows */
-span.inline-time {
-    font-size: 9px;
-    opacity: 0.6;
-    color: #a0a5c0;
-    font-weight: normal;
-    margin-left: 4px;
-}
-/* Ellipsis text truncation for portal names (auto-widened) */
-.tooltip-table th.portal-col,
-.tooltip-table td.portal-name {
-    white-space: nowrap;
-    text-align: left !important;
-}
-.mismatch-row,
-.mismatch-cell {
-    background: rgba(255, 193, 7, 0.12) !important;
-    color: #ffc107 !important;
-    font-weight: bold;
-}
-.mismatch-row td,
-td.mismatch-cell {
-    color: #ffc107 !important;
-}
-
-.res-text {
-    color: #0088ff !important;
-    font-weight: bold;
-}
-.enl-text {
-    color: #03dc03 !important;
-    font-weight: bold;
 }

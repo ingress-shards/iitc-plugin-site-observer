@@ -4,11 +4,16 @@ import seasonManifest from "@ingress-shards/ingress-events-core/conf/recent/seas
 import seasonGeocode from "@ingress-shards/ingress-events-core/conf/recent/season_geocode.json";
 
 import {
+    bindTooltips,
     ConfigRegistry,
+    createGoalScoringTooltipResolver,
+    createLinkScoringTooltipResolver,
+    createWaveTooltipResolver,
     getOrnamentIdsByTag,
     type EventBlueprints,
     type SeasonGeocode,
     type SeasonManifest,
+    type SiteId,
 } from "@ingress-shards/ingress-events-core";
 
 import { SiteStateManager } from "./db/SiteStateManager";
@@ -20,7 +25,6 @@ import { ObserverView } from "./ui/ObserverView";
 import type { ObserverHost } from "./ui/hosts/ObserverHost";
 import { DialogHost } from "./ui/hosts/DialogHost";
 import { PaneHost } from "./ui/hosts/PaneHost";
-import { TooltipComponent } from "./ui/components/TooltipComponent";
 import { ShortcutControlComponent } from "./ui/components/ShortcutControlComponent";
 import { EventCoordinator } from "./EventCoordinator";
 import { UITrigger } from "./types/ObserverEvents";
@@ -54,7 +58,6 @@ class SiteObserver implements Plugin.Class {
     private eventCoordinator!: EventCoordinator;
     private view!: ObserverView;
     private host?: ObserverHost;
-    private tooltipComponent!: TooltipComponent;
     private shortcutControl?: ShortcutControlComponent;
 
     private initializeServices(): void {
@@ -90,7 +93,6 @@ class SiteObserver implements Plugin.Class {
             this.observerScheduler,
             this.intelIngestionService,
         );
-        this.tooltipComponent = new TooltipComponent(this.configRegistry);
     }
 
     private initializeUI(): void {
@@ -106,10 +108,12 @@ class SiteObserver implements Plugin.Class {
             this.addMapControl();
         }
 
-        this.tooltipComponent.bindEvents(
-            (id) => this.configRegistry.getSiteConfig(id),
-            (id) => this.siteStateManager.get(id)
-        );
+        const getSiteState = (siteId: SiteId) => this.siteStateManager.get(siteId);
+        bindTooltips({
+            wave: createWaveTooltipResolver(this.configRegistry, getSiteState),
+            goals: createGoalScoringTooltipResolver(this.configRegistry, getSiteState),
+            links: createLinkScoringTooltipResolver(this.configRegistry, getSiteState),
+        });
     }
 
     private isSmartphone(): boolean {
