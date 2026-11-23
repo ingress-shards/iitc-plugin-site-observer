@@ -1,10 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { fromString as instantFromString } from "temporal-polyfill/fns/Instant";
 import { SiteTableComponent } from "./SiteTableComponent.js";
+import type { SiteStateManager } from "../../db/SiteStateManager.js";
 import {
     ConfigRegistry,
+    setLocale,
     type EventBlueprints,
     type SeasonGeocode,
     type SeasonManifest,
+    type SiteState,
 } from "@ingress-shards/ingress-events-core";
 
 const createMockRegistry = (): ConfigRegistry => {
@@ -138,6 +142,115 @@ describe("SiteTableComponent.getSiteConfigsByDate", () => {
         expect(Object.keys(grouped)).toContain("2026-11-01");
         expect(grouped["2026-10-24"]).toHaveLength(2);
         expect(grouped["2026-11-01"]).toHaveLength(1);
+    });
+});
+
+const createShardStormRegistry = (): ConfigRegistry => {
+    return new ConfigRegistry(
+        {
+            events: { STORM: { label: "Shard Storm" } },
+            ornaments: {},
+            shardMechanics: {
+                "1w_420m_18j": {
+                    waves: [{ startOffset: 0, endOffset: 420, quantity: 3 }],
+                    waveActions: [
+                        { action: "spawn", time: 0 },
+                        { action: "jump", time: 169 },
+                        { action: "despawn", time: 420 },
+                    ],
+                },
+            },
+            targetMechanics: {},
+            linkScoringRules: {},
+        } as unknown as EventBlueprints,
+        {
+            seasons: [
+                {
+                    id: "2026-cygnus",
+                    year: 2026,
+                    name: "Cygnus",
+                    overviewUrl: "",
+                    events: [
+                        {
+                            eventType: "STORM",
+                            startTime: "14:00",
+                            mechanics: { shards: { shardMechanics: "1w_420m_18j", scoring: {} } },
+                        },
+                    ],
+                },
+            ],
+        } as unknown as SeasonManifest,
+        {
+            seasons: [
+                {
+                    id: "2026-cygnus",
+                    sites: [
+                        {
+                            id: "2026-cygnus-perth",
+                            name: "Perth, Australia",
+                            latE6: -31959229,
+                            lngE6: 115876362,
+                            eventType: "STORM",
+                            startTime: "2026-11-21T14:00:00[Australia/Perth]",
+                            timeZone: "Australia/Perth",
+                            countryCode: "AU",
+                        },
+                    ],
+                },
+            ],
+        } as unknown as SeasonGeocode
+    );
+};
+
+describe("SiteTableComponent.render status phases", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        setLocale("en-GB");
+    });
+
+    afterEach(() => {
+        setLocale(undefined);
+        vi.useRealTimers();
+    });
+
+    it("renders Active countdown to activeDurationMinutes end and Complete during stationary post-jump window", async () => {
+        const registry = createShardStormRegistry();
+        const perthState: SiteState = {
+            metadata: {
+                siteId: "2026-cygnus-perth",
+                seasonId: "2026-cygnus",
+                lastUpdated: 1795251000000,
+            },
+            telemetry: {
+                portals: {
+                    1: { title: "Portal 1", latE6: -31959229, lngE6: 115876362 },
+                },
+                shards: {
+                    1: { history: [{ action: "spawn", moveTime: 1795240800000, portalId: 1 }] },
+                    2: { history: [{ action: "spawn", moveTime: 1795240800000, portalId: 1 }] },
+                    3: { history: [{ action: "spawn", moveTime: 1795240800000, portalId: 1 }] },
+                },
+            },
+        };
+        const stubDataManager = {
+            get: vi.fn().mockResolvedValue(perthState),
+        } as unknown as SiteStateManager;
+
+        const component = new SiteTableComponent(stubDataManager, registry, vi.fn(), vi.fn());
+        const sitesByDate = SiteTableComponent.getSiteConfigsByDate(registry.getAllSites());
+
+        // 15:00 AWST (07:00 UTC): 1h 50m remaining until 16:50 AWST active end (not 21:00 despawn)
+        vi.setSystemTime(instantFromString("2026-11-21T07:00:00Z").epochMilliseconds);
+        const activeHtml = await component.render(sitesByDate, { selectedDate: "2026-11-21", openSites: {} });
+        expect(activeHtml).toContain("phase-active");
+        expect(activeHtml).toContain("Active · 1h 50m");
+
+        // 17:09:58 AWST (09:09:58 UTC): stationary post-jump period before 21:00 despawn
+        vi.setSystemTime(instantFromString("2026-11-21T09:09:58Z").epochMilliseconds);
+        const completeHtml = await component.render(sitesByDate, { selectedDate: "2026-11-21", openSites: {} });
+        expect(completeHtml).toContain("phase-complete");
+        expect(completeHtml).toContain(">Complete<");
+        expect(completeHtml).not.toContain("phase-active");
     });
 });
 

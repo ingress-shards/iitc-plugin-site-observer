@@ -4,13 +4,15 @@ import { getBasic } from "temporal-polyfill/fns/Calendar";
 import { toString as dateToString, createFormat as createPlainDateFormat, type Record as PlainDateRecord } from "temporal-polyfill/fns/PlainDate";
 import {
     SitePhase,
-    SiteManager,
+    calculateSitePhase,
+    formatSiteStatus,
     TACTICAL_MARKER_SVG,
     UI_COLORS,
     calculateBoundingBoxDimensions,
     ALIGNMENT_COLORS,
     roundToDecimalPlaces,
-    renderScoringTable
+    renderScoringTable,
+    MS_PER_MINUTE
 } from "@ingress-shards/ingress-events-core";
 import type { SiteConfig, SiteState, ConfigRegistry } from "@ingress-shards/ingress-events-core";
 import { SiteStateManager } from "../../db/SiteStateManager";
@@ -105,22 +107,26 @@ export class SiteTableComponent {
             return { sitePhase: SitePhase.NoData };
         }
 
-        const startTimeZoned = zdtFromString(siteConfig.geocode.startTime, getBasic);
         const expectedShards = siteConfig.timeline.shards.reduce((sum, w) => sum + (w.expectedShards ?? 0), 0);
+        const nowMs = instant().epochMilliseconds;
 
-        const sitePhase = SiteManager.calculatePhase({
-            startTime: startTimeZoned,
-            eventDurationMins: siteConfig.timeline.durationMinutes,
+        const sitePhase = calculateSitePhase({
+            startMs: siteConfig.timeline.start,
+            activeDurationMinutes: siteConfig.timeline.activeDurationMinutes,
             shards: { actual: actualShards, expected: expectedShards },
             hasOrnaments,
+            nowMs,
         });
 
-        const nowMs = instant().epochMilliseconds;
         if ([SitePhase.Scheduled, SitePhase.Discovery, SitePhase.StandBy].includes(sitePhase)) {
             return { sitePhase, fromMs: nowMs, toMs: siteConfig.timeline.start };
         }
         if (sitePhase === SitePhase.Active) {
-            return { sitePhase, fromMs: nowMs, toMs: siteConfig.timeline.end };
+            return {
+                sitePhase,
+                fromMs: nowMs,
+                toMs: siteConfig.timeline.start + siteConfig.timeline.activeDurationMinutes * MS_PER_MINUTE,
+            };
         }
 
         return { sitePhase };
@@ -216,7 +222,7 @@ export class SiteTableComponent {
                             </div>
                             <div class="site-header-secondary">
                                 <span class="score-summary-block">${scoreSummaryHtml}</span>
-                                <span class="site-status-badge phase-${phaseKey}">${SiteManager.formatStatus({ phase: sitePhase, fromMs, toMs })}</span>
+                                <span class="site-status-badge phase-${phaseKey}">${formatSiteStatus({ phase: sitePhase, fromMs, toMs })}</span>
                             </div>
                         </div>
                         <div class="site-row-body">
@@ -261,7 +267,7 @@ export class SiteTableComponent {
                 
                 if (selectedSite) {
                     const { sitePhase, fromMs, toMs } = this.getSiteStatus(selectedSite, actualShards, hasOrnaments);
-                    const statusText = SiteManager.formatStatus({ phase: sitePhase, fromMs, toMs });
+                    const statusText = formatSiteStatus({ phase: sitePhase, fromMs, toMs });
                     const phaseKey = SitePhase[sitePhase]?.toLowerCase() ?? "unknown";
                     const $badge = $row.find(".site-status-badge");
                     $badge.attr("class", `site-status-badge phase-${phaseKey}`).html(statusText);

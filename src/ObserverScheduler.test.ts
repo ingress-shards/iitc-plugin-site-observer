@@ -33,7 +33,7 @@ describe("ObserverScheduler", () => {
                 start,
                 preEventCutoff: start - 2 * 60 * 60 * 1000,
                 end: start + 45 * 60 * 1000,
-                durationMinutes: 45,
+                activeDurationMinutes: 45,
                 jumpGroupSize: 3,
                 shards: [
                     {
