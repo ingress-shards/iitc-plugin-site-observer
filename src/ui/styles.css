@@ -487,9 +487,11 @@ button.go-to-site-btn:hover:not(:disabled),
     cursor: not-allowed;
 }
 
-.marker-svg-pin.marker-site-inline {
+.go-to-site-btn .marker-svg-pin {
     width: 14px;
     height: 23px;
+    --pin-color: var(--color-signal);
+    --pin-inner-color: #ffffff;
 }
 
 button.observer-button {

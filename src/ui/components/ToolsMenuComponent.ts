@@ -2,10 +2,9 @@ import { total } from "temporal-polyfill/fns/Duration";
 import { diff as diffZonedDateTime } from "temporal-polyfill/fns/ZonedDateTime";
 import { zonedDateTimeISO } from "temporal-polyfill/fns/Now";
 import {
-    EXPORT_ICON_SVG,
-    getOrnamentSVG,
-    getTargetOrnamentSVG,
-    UI_COLORS,
+    renderExportIcon,
+    renderOrnamentIcon,
+    renderTargetOrnament,
     type IngestionItem,
 } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand, UITrigger } from "../../types/ObserverEvents";
@@ -37,13 +36,13 @@ export class ToolsMenuComponent {
                     
                     <div class="export-tools-menu">
                         <button class="export-site-state-button" title="Export Site Data">
-                            ${EXPORT_ICON_SVG}
+                            ${renderExportIcon()}
                         </button>
                         <button class="export-ornaments-button" title="Export Pre-Event Ornaments">
-                            ${getOrnamentSVG(UI_COLORS.SIGNAL)}
+                            ${renderOrnamentIcon()}
                         </button>
                         <button class="export-targets-button" title="Export Target Portals">
-                            ${getTargetOrnamentSVG(UI_COLORS.SIGNAL)}
+                            ${renderTargetOrnament()}
                         </button>
                         <button class="clear-site-data-button observer-button warning-button" title="Clear data for the selected site">
                             Clear Data

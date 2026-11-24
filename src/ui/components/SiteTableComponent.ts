@@ -6,8 +6,7 @@ import {
     SitePhase,
     calculateSitePhase,
     formatSiteStatus,
-    TACTICAL_MARKER_SVG,
-    UI_COLORS,
+    renderSiteMarker,
     calculateBoundingBoxDimensions,
     ALIGNMENT_COLORS,
     roundToDecimalPlaces,
@@ -216,7 +215,7 @@ export class SiteTableComponent {
                             <div class="site-header-primary">
                                 <span class="site-row-arrow">▶</span>
                                 <button class="go-to-site-btn" data-site-id="${site.geocode.id}" title="Go to Site">
-                                    ${TACTICAL_MARKER_SVG.replace('class="marker-svg-pin"', `class="marker-svg-pin marker-site-inline" style="--pin-color: ${UI_COLORS.SIGNAL}"`)}
+                                    ${renderSiteMarker()}
                                 </button>
                                 <span class="site-label" title="${site.geocode.name}">${site.geocode.name}</span>
                             </div>
