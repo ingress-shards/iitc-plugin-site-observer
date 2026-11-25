@@ -37,6 +37,15 @@ const config = tseslint.config(
         rules: {
             "no-underscore-dangle": "error",
             "prefer-arrow-functions/prefer-arrow-functions": "error",
+            "no-restricted-globals": [
+                "error",
+                { name: "Date", message: "Use temporal-polyfill/fns instead of native Date." },
+            ],
+            "no-restricted-properties": [
+                "error",
+                { object: "globalThis", property: "Date", message: "Use temporal-polyfill/fns instead of native Date." },
+                { object: "window", property: "Date", message: "Use temporal-polyfill/fns instead of native Date." },
+            ],
         },
     },
     {
@@ -67,6 +76,14 @@ const config = tseslint.config(
             ],
             "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
             "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: false }],
+            "@typescript-eslint/no-restricted-types": [
+                "error",
+                {
+                    types: {
+                        Date: { message: "Use temporal-polyfill/fns types instead of native Date." },
+                    },
+                },
+            ],
         },
     },
     {

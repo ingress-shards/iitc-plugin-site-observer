@@ -1,3 +1,4 @@
+import { instant as nowInstant } from "temporal-polyfill/fns/Now";
 import type { ShardJumpCapture, MapSnapshot } from "@ingress-shards/ingress-events-core";
 import { ObserverCommand, ObserverResult } from "./types/ObserverEvents";
 import type { ShardObserver } from "./observers/ShardObserver";
@@ -21,7 +22,7 @@ export class EventCoordinator {
             const task = async () => {
                 await this.ingestionQueue;
                 try {
-                    const timestamp = customEvent.detail.timestamp ?? Date.now();
+                    const timestamp = customEvent.detail.timestamp ?? nowInstant().epochMilliseconds;
                     await this.intelIngestionService.ingest([{
                         filename: `shard-jump-times-${timestamp}.json`,
                         data: customEvent.detail,
@@ -38,7 +39,7 @@ export class EventCoordinator {
             const task = async () => {
                 await this.ingestionQueue;
                 try {
-                    const timestamp = customEvent.detail.timestamp ?? Date.now();
+                    const timestamp = customEvent.detail.timestamp ?? nowInstant().epochMilliseconds;
                     await this.intelIngestionService.ingest([{
                         filename: `map-snapshot-${timestamp}.json`,
                         data: customEvent.detail,
