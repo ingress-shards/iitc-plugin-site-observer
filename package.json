@@ -50,7 +50,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",
-    "vitest": "4.1.12",
+    "vite": "^8.4.0",
+    "vitest": "5.1.2",
     "webpack": "^5.112.2",
     "webpack-bundle-analyzer": "^5.4.2",
     "webpack-cli": "^7.3.1"
